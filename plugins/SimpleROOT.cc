@@ -115,7 +115,5 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     events_->Fill();
 }
 
-
-
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
