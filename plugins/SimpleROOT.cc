@@ -47,16 +47,10 @@ class SimpleROOT : public edm::EDAnalyzer {
     public:
     	explicit SimpleROOT(const edm::ParameterSet&);
       	~SimpleROOT();
-        
-
-//	static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-
 
     private:
-//	virtual void beginJob() override;
 	virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
         virtual void reset();
-//	virtual void endJob() override;
 
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
@@ -66,7 +60,11 @@ class SimpleROOT : public edm::EDAnalyzer {
 	
 		
         // --- CheckPoint 1 --- 
-	UChar_t numVtx_; // 8-bit integer denoted as "b" in the leaflist of the branch
+	UChar_t numVtx_; // 8-bit integer can hold up to 255 vertices, denoted as "b" in the leaflist of the branch
+	UChar_t flagBit_; // 8-bit integer can hold up to 255 bits, denoted as "b" in the leaflist of the branch
+
+
+        enum flags_{hasGoodPV=0};
       
 };
 
@@ -75,17 +73,17 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     // --- CheckPoint 2 --- 
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("numVtx",&numVtx_,"numVtx/b");
+    events_->Branch("flagBit",&flagBit_,"flagBit/b");
 }
 
 void SimpleROOT::reset()
 {
     // --- CheckPoint 3 --- 
     numVtx_ = 0;
+    flagBit_ = 0;
 }
 
 SimpleROOT::~SimpleROOT() {}
-
-
 
 // ------------ method called for each event  ------------
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
@@ -111,37 +109,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     // --- loop inside the objects
     const reco::Vertex &PV = vertices->front();  // get event's primary vertex
-    bool PVisValid = PV.isValid();
+    if(PV.isValid()) flagBit_ |= 1 << hasGoodPV;
     numVtx_ = UChar_t(vertices->size());
     
-    cout << "PVisValid = " << PVisValid << endl;
-
     events_->Fill();
 }
 
 
-//// ------------ method called once each job just before starting event loop  ------------
-//void 
-//SimpleROOT::beginJob()
-//{
-//}
-//
-//// ------------ method called once each job just after ending the event loop  ------------
-//void 
-//SimpleROOT::endJob() 
-//{
-//}
-//
-//
-//// ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
-//void
-//SimpleROOT::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {
-//  //The following says we do not know what parameters are allowed so do no validation
-//  // Please change this to state exactly what you do use, even if it is no parameters
-//  edm::ParameterSetDescription desc;
-//  desc.setUnknown();
-//  descriptions.addDefault(desc);
-//}
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
