@@ -51,6 +51,7 @@ class SimpleROOT : public edm::EDAnalyzer {
     private:
 	virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
         virtual void reset();
+        virtual bool isGoodLepton(const pat::Muon &mu);
 
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
@@ -64,6 +65,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 	UChar_t flagBit_; // 8-bit integer can hold up to 255 bits, denoted as "b" in the leaflist of the branch
 
 
+        // --- enumerate possible flags, once and for ever, *never* change the ordering of the enumed flags
         enum flags_{hasGoodPV=0};
       
 };
@@ -109,11 +111,35 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     // --- loop inside the objects
     const reco::Vertex &PV = vertices->front();  // get event's primary vertex
-    if(PV.isValid()) flagBit_ |= 1 << hasGoodPV;
+    if(PV.isValid()) flagBit_ |= 1 << hasGoodPV; // set flagBit
     numVtx_ = UChar_t(vertices->size());
     
+    std::vector<const reco::Candidate *> leptons; // in this container we will store all selected RECO electrons and RECO muons 
+
+    for (const pat::Muon &mu : *muons) 
+    {
+    	// --- https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId
+	if(mu.pt() < 10) 
+	if(fabs(mu.eta()) > 2.4) 
+	if(mu.isTightMuon(PV)) 
+	leptons.push_back(&mu);
+        
+       //	mu.pfCandidateRef();
+    }
+    for (const pat::Electron &el : *electrons) leptons.push_back(&el);
+
+    cout << "lepton size = " << leptons.size() << endl;
+
     events_->Fill();
 }
 
+bool SimpleROOT::isGoodLepton(const pat::Muon &mu)
+{
+    bool res = true;
+    if(mu.pt() < 10) 
+    if(fabs(mu.eta()) > 2.4) 
+    res = false;
+    return res;
+}
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
