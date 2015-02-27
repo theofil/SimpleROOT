@@ -74,7 +74,7 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
 {
     // --- CheckPoint 2 --- 
     events_ = fileService_->make<TTree>("events","events");
-    events_->Branch("numVtx_",&numVtx_,"numVtx_/b");
+    events_->Branch("numVtx",&numVtx_,"numVtx/b");
 }
 
 void SimpleROOT::reset()
