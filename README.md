@@ -1,5 +1,5 @@
 # SimpleROOT
-This is a very simple MiniAOD analyzer to flat TTree producer, for the edgeZ analysis.  
+This is a very simple MiniAOD analyzer producing flat ROOT TTree for the edgeZ analysis.  
 
 How to install this at CERN:  
 
