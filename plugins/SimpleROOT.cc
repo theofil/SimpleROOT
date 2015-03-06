@@ -51,7 +51,9 @@ class SimpleROOT : public edm::EDAnalyzer {
     private:
 	virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
         virtual void reset();
-        virtual bool isGoodLepton(const pat::Muon &mu);
+        virtual bool isGoodMuon(const pat::Muon &mu);
+        virtual bool isGoodElectron(const pat::Electron &el);
+        virtual bool isGoodVertex(const reco::Vertex &PV);
 
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
@@ -110,36 +112,58 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByLabel("slimmedMETs", mets);
 
     // --- loop inside the objects
-    const reco::Vertex &PV = vertices->front();  // get event's primary vertex
-    if(PV.isValid()) flagBit_ |= 1 << hasGoodPV; // set flagBit
+    reco::Vertex vtx;
+    for (const reco::Vertex &PV : *vertices)
+    {
+	if( isGoodVertex(PV) ){ vtx = PV; break;} // get first good vertex 
+    }
     numVtx_ = UChar_t(vertices->size());
-    
+
     std::vector<const reco::Candidate *> leptons; // in this container we will store all selected RECO electrons and RECO muons 
 
     for (const pat::Muon &mu : *muons) 
     {
     	// --- https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId
-	if(mu.pt() < 10) 
-	if(fabs(mu.eta()) > 2.4) 
-	if(mu.isTightMuon(PV)) 
-	leptons.push_back(&mu);
-        
-       //	mu.pfCandidateRef();
+	if( isGoodMuon(mu) )leptons.push_back(&mu);
     }
-    for (const pat::Electron &el : *electrons) leptons.push_back(&el);
+    for (const pat::Electron &el : *electrons)
+    {
+         if( isGoodElectron(el) ) leptons.push_back(&el);
+    }
+
 
     cout << "lepton size = " << leptons.size() << endl;
 
     events_->Fill();
 }
 
-bool SimpleROOT::isGoodLepton(const pat::Muon &mu)
+bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
 {
-    bool res = true;
+    bool res = true; // by default is good, unless fails a cut bellow
+
     if(mu.pt() < 10) 
     if(fabs(mu.eta()) > 2.4) 
     res = false;
+
     return res;
 }
+
+bool SimpleROOT::isGoodElectron(const pat::Electron &el)
+{
+    bool res = true; // by default is good, unless fails a cut bellow
+
+    if(el.pt() < 10) 
+    if(fabs(el.eta()) > 2.4) 
+    res = false;
+
+    return res;
+}
+
+bool SimpleROOT::isGoodVertex(const reco::Vertex &vtx)
+{
+  // The "good vertex" selection is borrowed Ilya Kravchenko who borrowed from Giovanni Zevi Della Porta
+  return ( !(vtx.chi2()==0 && vtx.ndof()==0) && vtx.ndof()>=4. && vtx.position().Rho()<=2.0 && fabs(vtx.position().Z())<=24.0 ) ? true : false; 
+}
+
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
