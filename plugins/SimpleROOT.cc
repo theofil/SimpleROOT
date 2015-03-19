@@ -107,8 +107,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
         
-        unsigned short l1pdgID_;  // stores the produce of charge (+/-) and id (1,2) for (emu)
-        unsigned short l2pdgID_;  // i.e. -1 = electron +1 positron, -2 = muon
+        short l1pdgID_;  // stores the produce of charge (+/-) and id (1,2) for (emu)
+        short l2pdgID_;  // i.e. -1 = electron +1 positron, -2 = muon
       
 };
 
@@ -145,8 +145,8 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
-    events_->Branch("l1pdgID"          ,&l1pdgID_               ,"l1pdgID/s");
-    events_->Branch("l2pdgID"          ,&l2pdgID_               ,"l2pdgID/s");
+    events_->Branch("l1pdgID"          ,&l1pdgID_               ,"l1pdgID/S");
+    events_->Branch("l2pdgID"          ,&l2pdgID_               ,"l2pdgID/S");
     //events_->Branch(""          ,&               ,"");
 }
 
@@ -154,7 +154,7 @@ void SimpleROOT::reset()
 {
     // --- CP3--- 
     goodVtx_                 = 0;
-    nVtx_                  = 0;
+    nVtx_                    = 0;
     nLeps_                   = 0;
     nJets_                   = 0;
     nRjets_                  = 0;
@@ -263,11 +263,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     sortByPt(myRjets);
     sortByPt(myPhotons);
 
-//    cout << "print all sorted objects " << endl;
-//    for (auto & lep : myLeptons) cout <<"lep pt = "<<  lep->pt() << " (eta, phi) = (" << lep->eta() << " , " << lep->phi() << ")" << " lep pdgId = " << lep->pdgId() << endl;
-//    for(auto &myjet : myJets) cout << "jet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
-//    for(auto &myjet : myRjets) cout << "rjet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
-//    for(auto &myphoton : myPhotons) cout << "pho pt = " << myphoton->pt() << " (eta, phi) = (" << myphoton->eta() << " , " << myphoton->phi() << ")" << endl;
+//    for(auto &mylep : myLeptons) cout << "mylep->pdgID() = " << mylep->pdgId() << endl;
  
     TLorentzVector l1,l2;
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
@@ -319,8 +315,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     t1vHT_                   = t1HTVector.Pt();         
     jvHT_                    = jHTVector.Pt();          
     
-    l1pdgID_                 = nLeps_ >=1 ? myLeptons[0]->pdgId() : 0;
-    l2pdgID_                 = nLeps_ >=2 ? myLeptons[1]->pdgId() : 0;
+    l1pdgID_                 = nLeps_ >=1 ? (unsigned short) myLeptons[0]->pdgId() : 0;
+    l2pdgID_                 = nLeps_ >=2 ? (unsigned short) myLeptons[1]->pdgId() : 0;
     events_->Fill();
 }
 
@@ -334,7 +330,6 @@ bool SimpleROOT::isGoodPhoton(const pat::Photon &photon)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
-    cout << __LINE__ << endl;
     if(photon.pt() < 20) res = false; 
     if(fabs(photon.eta()) > 2.4) res = false;
 
