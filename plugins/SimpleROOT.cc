@@ -45,28 +45,6 @@
 
 using namespace std;
 
-
-// --- Class MiniData holding all variables to be saved on disk
-class MiniData{
-    public:
-    MiniData(){;}
-    void reset();
-
-    int flagBit;          // flag to store bits of information  
-    int numVtx;
-    int isData;
-    float mll;
-};
-
-void MiniData::reset()
-{
-    flagBit      = 0;
-    numVtx       = 0;
-    isData       = 0;
-    mll          = 0;
-}
-
-
 class SimpleROOT : public edm::EDAnalyzer {
     public:
     	explicit SimpleROOT(const edm::ParameterSet&);
@@ -80,42 +58,121 @@ class SimpleROOT : public edm::EDAnalyzer {
         virtual bool isGoodVertex(const reco::Vertex &PV);
         virtual bool isGoodJet(const pat::Jet &myJet);
         virtual bool isGoodPhoton(const pat::Photon &myPhoton);
-
-
+        virtual void sortByPt(vector<const reco::Candidate *> myRecoCand);
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
-
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
-	// ----------member data 
-	// to add more variable you should always edit 3 checkpoints of this file 
-	// (give typedef, include it in the branch, initialization for each event)
 	
-		
-        // --- CheckPoint 1 --- 
-	UChar_t numVtx_; // 8-bit integer can hold up to 255 vertices, denoted as "b" in the leaflist of the branch
-	UChar_t flagBit_; // 8-bit integer can hold up to 255 bits, denoted as "b" in the leaflist of the branch
+        // ---  CP1 --- 
+	bool goodVtx_; 
+	unsigned short nVtx_; 
 
+        unsigned short nLeps_;
+        unsigned short nJets_;
+        unsigned short nRjets_;
+        unsigned short nPhos_;
 
-        // --- enumerate possible flags, once and for ever, *never* change the ordering of the enumed flags
-        enum flags_{hasGoodPV=0};
+        float l1Pt_;         // leading lepton
+        float l2Pt_;         // trailing lepton
+        float l1Eta_;
+        float l2Eta_;
+        float l1Phi_;
+        float l2Phi_;
+        float l1Iso_;
+        float l2Iso_;
+        float l1l2DPhi_;
+        float l1l2DR_;
+        float l1l2Pt_;
+        float l1l2M_;
+        float l1l2Eta_;
+        float l1l2Phi_;
+     
+        float MET_;          // raw pf-met
+        float METPhi_;
+        float t1MET_;
+        float t1METPhi_;
+        float sumEt_;
+        float t1sumEt_;
+
+        float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -MET - l1l2] 
+        float t1vHT_;         // as vHT but with t1 correction
+	float vjHT_;          // recoil of hard jets and subleading leptons
+        
       
 };
 
 SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
 {
-    // --- CheckPoint 2 --- 
+    // --- CP2 --- 
     events_ = fileService_->make<TTree>("events","events");
-    events_->Branch("numVtx",&numVtx_,"numVtx/b");
-    events_->Branch("flagBit",&flagBit_,"flagBit/b");
+    events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
+    events_->Branch("nVtx"           ,&nVtx_                ,"nVtx/s");
+    events_->Branch("nLeps"            ,&nLeps_                 ,"nLeps/s");
+    events_->Branch("nJets"            ,&nJets_                 ,"nJets/s");
+    events_->Branch("nRjets"           ,&nRjets_                ,"nRjets/s");
+    events_->Branch("nPhos"            ,&nPhos_                 ,"nPhos/s");
+    events_->Branch("l1Pt"             ,&l1Pt_                  ,"l1Pt/F    ");
+    events_->Branch("l2Pt"             ,&l2Pt_                  ,"l2Pt/F    ");
+    events_->Branch("l1Eta"            ,&l1Eta_                 ,"l1Eta/F   ");
+    events_->Branch("l2Eta"            ,&l2Eta_                 ,"l2Eta/F   ");
+    events_->Branch("l1Phi"            ,&l1Phi_                 ,"l1Phi/F   ");
+    events_->Branch("l2Phi"            ,&l2Phi_                 ,"l2Phi/F   ");
+    events_->Branch("l1Iso"            ,&l1Iso_                 ,"l1Iso/F   ");
+    events_->Branch("l2Iso"            ,&l2Iso_                 ,"l2Iso/F   ");
+    events_->Branch("l1l2DPhi"         ,&l1l2DPhi_              ,"l1l2DPhi/F");
+    events_->Branch("l1l2DR"           ,&l1l2DR_                ,"l1l2DR/F  ");
+    events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F  ");
+    events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F   ");
+    events_->Branch("l1l2Eta"          ,&l1l2Eta_               ,"l1l2Eta/F ");
+    events_->Branch("l1l2Phi"          ,&l1l2Phi_               ,"l1l2Phi/F ");
+    events_->Branch("MET"              ,&MET_                   ,"MET/F     ");
+    events_->Branch("METPhi"           ,&METPhi_                ,"METPhi/F  ");
+    events_->Branch("t1MET"            ,&t1MET_                 ,"t1MET/F   ");
+    events_->Branch("t1METPhi"         ,&t1METPhi_              ,"t1METPhi/F");
+    events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F   ");
+    events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F ");
+    events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
+    events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
+    events_->Branch("vjHT"             ,&vjHT_                  ,"vjHT/F     ");
+    //events_->Branch(""          ,&               ,"");
 }
 
 void SimpleROOT::reset()
 {
-    // --- CheckPoint 3 --- 
-    numVtx_ = 0;
-    flagBit_ = 0;
+    // --- CP3--- 
+    goodVtx_                 = 0;
+    nVtx_                  = 0;
+    nLeps_                   = 0;
+    nJets_                   = 0;
+    nRjets_                  = 0;
+    nPhos_                   = 0;
+    l1Pt_                    = 0;         
+    l2Pt_                    = 0;         
+    l1Eta_                   = 0;
+    l2Eta_                   = 0;
+    l1Phi_                   = 0;
+    l2Phi_                   = 0;
+    l1Iso_                   = 0;
+    l2Iso_                   = 0;
+    l1l2DPhi_                = 0;
+    l1l2DR_                  = 0;
+    l1l2Pt_                  = 0;
+    l1l2M_                   = 0;
+    l1l2Eta_                 = 0;
+    l1l2Phi_                 = 0;
+    
+    MET_                     = 0;          
+    METPhi_                  = 0;
+    t1MET_                   = 0;
+    t1METPhi_                = 0;
+    sumEt_                   = 0;
+    t1sumEt_                 = 0;
+
+    vHT_                     = 0;            
+    t1vHT_                   = 0;         
+    vjHT_                    = 0;          
 }
 
 SimpleROOT::~SimpleROOT() {}
@@ -190,24 +247,63 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     printf("\n");
 
+    sortByPt(myLeptons);
+    sortByPt(myJets);
+    sortByPt(myRjets);
+    sortByPt(myPhotons);
 
-
-    //  --- sort by pt all objects, the [] is a C++11 lambda func 
-    std::sort(myLeptons.begin(), myLeptons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} ); 
-    std::sort(myJets.begin(), myJets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} ); 
-    std::sort(myRjets.begin(), myRjets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} ); 
-
-    cout << "print all sorted objects " << endl;
-    for (auto & lep : myLeptons) cout <<"let pt = "<<  lep->pt() << " (eta, phi) = (" << lep->eta() << " , " << lep->phi() << ")" << " lep pdgId = " << lep->pdgId() << endl;
-    for(auto &myjet : myJets) cout << "jet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
-    for(auto &myjet : myRjets) cout << "rjet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
-    for(auto &myphoton : myPhotons) cout << "rjet pt = " << myphoton->pt() << " (eta, phi) = (" << myphoton->eta() << " , " << myphoton->phi() << ")" << endl;
+//    cout << "print all sorted objects " << endl;
+//    for (auto & lep : myLeptons) cout <<"lep pt = "<<  lep->pt() << " (eta, phi) = (" << lep->eta() << " , " << lep->phi() << ")" << " lep pdgId = " << lep->pdgId() << endl;
+//    for(auto &myjet : myJets) cout << "jet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
+//    for(auto &myjet : myRjets) cout << "rjet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
+//    for(auto &myphoton : myPhotons) cout << "pho pt = " << myphoton->pt() << " (eta, phi) = (" << myphoton->eta() << " , " << myphoton->phi() << ")" << endl;
  
-    // --- Fill branches
-    numVtx_ = UChar_t(vertices->size());
-    if( vtx.isValid() ) flagBit_ |= 1 << hasGoodPV;
+    TLorentzVector l1,l2; 
+    if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
+    if(myLeptons.size() >=2) l2 = P4(myLeptons[1]);
 
+    for(auto &lep : myLeptons) cout << " lep.Mass = " << P4(lep).M() << " lep->pdgId() = " << lep->pdgId() <<endl;
+
+    // --- Fill branches CP4
+    nVtx_                    = (unsigned short) vertices->size();
+    goodVtx_                 = vtx.isValid() ? true:false;
+    nLeps_                   = (unsigned short) myLeptons.size();
+    nJets_                   = (unsigned short) myJets.size();
+    nRjets_                  = (unsigned short) myRjets.size();
+    nPhos_                   = (unsigned short) myPhotons.size();
+
+    l1Pt_                    = nLeps_>=1 ? l1.Pt() : 0;         
+    l2Pt_                    = nLeps_>=2 ? l2.Pt() : 0;         
+    l1Eta_                   = nLeps_>=1 && l1Pt_ >1.e-3 ? l1.Eta() : 0;
+    l2Eta_                   = nLeps_>=2 && l2Pt_ >1.e-3 ? l2.Eta() : 0;
+    l1Phi_                   = nLeps_>=1 ? l1.Phi() : 0;
+    l2Phi_                   = nLeps_>=2 ? l2.Phi() : 0;
+    l1Iso_                   = 0;
+    l2Iso_                   = 0;
+    l1l2DPhi_                = nLeps_>=2 ? l1.DeltaPhi(l2) : 0;
+    l1l2DR_                  = nLeps_>=2 ? l1.DeltaR(l2) : 0;
+    l1l2Pt_                  = nLeps_>=2 ? (l1+l2).Pt() : 0;
+    l1l2M_                   = nLeps_>=2 ? (l1+l2).M() : 0;
+    l1l2Eta_                 = nLeps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0;
+    l1l2Phi_                 = nLeps_>=2 ? (l1+l2).Phi() : 0;
+    
+    MET_                     = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);          
+    METPhi_                  = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
+    sumEt_                   = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
+    t1MET_                   = met.pt();
+    t1METPhi_                = met.phi();
+    t1sumEt_                 = met.sumEt();
+
+    vHT_                     = 0;            
+    t1vHT_                   = 0;         
+    vjHT_                    = 0;          
     events_->Fill();
+}
+
+void SimpleROOT::sortByPt(vector<const reco::Candidate *> myRecoCand)
+{
+    //  --- sort by pt all objects, the [] is a C++11 lambda func 
+    std::sort(myRecoCand.begin(), myRecoCand.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
 }
 
 bool SimpleROOT::isGoodPhoton(const pat::Photon &photon)
