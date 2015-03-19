@@ -45,6 +45,28 @@
 
 using namespace std;
 
+
+// --- Class MiniData holding all variables to be saved on disk
+class MiniData{
+    public:
+    MiniData(){;}
+    void reset();
+
+    int flagBit;          // flag to store bits of information  
+    int numVtx;
+    int isData;
+    float mll;
+};
+
+void MiniData::reset()
+{
+    flagBit      = 0;
+    numVtx       = 0;
+    isData       = 0;
+    mll          = 0;
+}
+
+
 class SimpleROOT : public edm::EDAnalyzer {
     public:
     	explicit SimpleROOT(const edm::ParameterSet&);
