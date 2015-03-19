@@ -13,12 +13,19 @@
 //
 // Original Author:  Konstantinos Theofilatos
 //         Created:  Fri, 20 Feb 2015 16:08:35 GMT
-//
-//
 
-// https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookMiniAOD
+// many thanks to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookMiniAOD
+//
+// Principles
+//
+// 1) producer's code should be intuitive and readable by anybody who knows English
+// 2) don't skip any event for any reason, save them all on disk even if ~empty
+// 3) be flat and use basic types for brances float, (unsigned) int,  (unsigned) short  and STD vectors
+// 4) don't introduce new structures and classes, unless it's not possible to go ahead without them
+// 5) be laconic and use smart commands when possible C++11, exploit ROOT buildin and STD
+// 6) event selection and logic should be undisturbed by technicalities
+// 7) don't use int when short is OK, double is forbidden
 
-// system include files
 #include <memory>
 
 // user include files
@@ -98,8 +105,10 @@ class SimpleROOT : public edm::EDAnalyzer {
 
         float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -MET - l1l2] 
         float t1vHT_;         // as vHT but with t1 correction
-	float vjHT_;          // recoil of hard jets and subleading leptons
+	float jvHT_;          // recoil of hard jets and subleading leptons
         
+        unsigned short l1pdgID_;  // stores the produce of charge (+/-) and id (1,2) for (emu)
+        unsigned short l2pdgID_;  // i.e. -1 = electron +1 positron, -2 = muon
       
 };
 
@@ -108,7 +117,7 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     // --- CP2 --- 
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
-    events_->Branch("nVtx"           ,&nVtx_                ,"nVtx/s");
+    events_->Branch("nVtx"             ,&nVtx_                  ,"nVtx/s");
     events_->Branch("nLeps"            ,&nLeps_                 ,"nLeps/s");
     events_->Branch("nJets"            ,&nJets_                 ,"nJets/s");
     events_->Branch("nRjets"           ,&nRjets_                ,"nRjets/s");
@@ -135,7 +144,9 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F ");
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
-    events_->Branch("vjHT"             ,&vjHT_                  ,"vjHT/F     ");
+    events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
+    events_->Branch("l1pdgID"          ,&l1pdgID_               ,"l1pdgID/s");
+    events_->Branch("l2pdgID"          ,&l2pdgID_               ,"l2pdgID/s");
     //events_->Branch(""          ,&               ,"");
 }
 
@@ -172,7 +183,9 @@ void SimpleROOT::reset()
 
     vHT_                     = 0;            
     t1vHT_                   = 0;         
-    vjHT_                    = 0;          
+    jvHT_                    = 0;          
+    l1pdgID_                 = 0;
+    l2pdgID_                 = 0;
 }
 
 SimpleROOT::~SimpleROOT() {}
@@ -181,7 +194,6 @@ SimpleROOT::~SimpleROOT() {}
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     reset(); // --- initialize all variables to be stored!
-    //using namespace edm;
 
     // --- get MiniAOD collections -- names of the collection are hard-coded (no need to read them from python as they don't change so frequently)
     edm::Handle<reco::VertexCollection> vertices;
@@ -239,13 +251,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     }
 
     const pat::MET &met = mets->front();
-    printf("MET: pt %5.1f, ptraw %5.1f, phi %+4.2f, sumEt (%.1f). genMET %.1f. MET with JES up/down: %.1f/%.1f\n",
-        met.pt(), met.shiftedPt(pat::MET::NoShift, pat::MET::Raw), met.phi(), met.sumEt(),
-        met.genMET()->pt(),
-        met.shiftedPt(pat::MET::JetEnUp), met.shiftedPt(pat::MET::JetEnDown));
-    // raw met use shiftedPt(pat::MET::NoShift, pat::MET::Raw) because of broken uncorrectedPt() method for Phys14
-
-    printf("\n");
+    float rawMET      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
+    float rawMETPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
+    float rawMETSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
+    float t1MET       = met.pt();
+    float t1METPhi    = met.phi();
+    float t1METSumEt  = met.sumEt();
 
     sortByPt(myLeptons);
     sortByPt(myJets);
@@ -258,11 +269,21 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 //    for(auto &myjet : myRjets) cout << "rjet pt = " << myjet->pt() << " (eta, phi) = (" << myjet->eta() << " , " << myjet->phi() << ")" << endl;
 //    for(auto &myphoton : myPhotons) cout << "pho pt = " << myphoton->pt() << " (eta, phi) = (" << myphoton->eta() << " , " << myphoton->phi() << ")" << endl;
  
-    TLorentzVector l1,l2; 
+    TLorentzVector l1,l2;
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
     if(myLeptons.size() >=2) l2 = P4(myLeptons[1]);
 
-    for(auto &lep : myLeptons) cout << " lep.Mass = " << P4(lep).M() << " lep->pdgId() = " << lep->pdgId() <<endl;
+    TLorentzVector METVector, t1METVector;
+    METVector.SetPtEtaPhiE  (rawMET  , 0, rawMETPhi, rawMET );
+    t1METVector.SetPtEtaPhiE(t1MET   , 0, t1METPhi , t1MET  );
+
+    TLorentzVector HTVector, t1HTVector, jHTVector; 
+   
+    HTVector   = -METVector -l1 -l2;
+    t1HTVector = -t1METVector -l1 -l2;
+    
+    for(auto &myjet : myJets)    jHTVector += P4(myjet);
+    for(auto &mylep : myLeptons) jHTVector -= P4(mylep);
 
     // --- Fill branches CP4
     nVtx_                    = (unsigned short) vertices->size();
@@ -287,16 +308,19 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     l1l2Eta_                 = nLeps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0;
     l1l2Phi_                 = nLeps_>=2 ? (l1+l2).Phi() : 0;
     
-    MET_                     = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);          
-    METPhi_                  = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
-    sumEt_                   = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
-    t1MET_                   = met.pt();
-    t1METPhi_                = met.phi();
-    t1sumEt_                 = met.sumEt();
+    MET_                     = rawMET;          
+    METPhi_                  = rawMETPhi;
+    sumEt_                   = rawMETSumEt;
+    t1MET_                   = t1MET;
+    t1METPhi_                = t1METPhi;
+    t1sumEt_                 = t1METSumEt;
 
-    vHT_                     = 0;            
-    t1vHT_                   = 0;         
-    vjHT_                    = 0;          
+    vHT_                     = HTVector.Pt();            
+    t1vHT_                   = t1HTVector.Pt();         
+    jvHT_                    = jHTVector.Pt();          
+    
+    l1pdgID_                 = nLeps_ >=1 ? myLeptons[0]->pdgId() : 0;
+    l2pdgID_                 = nLeps_ >=2 ? myLeptons[1]->pdgId() : 0;
     events_->Fill();
 }
 
