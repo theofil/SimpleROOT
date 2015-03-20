@@ -50,6 +50,10 @@
 #include "TTree.h"
 #include "TLorentzVector.h"
 
+#define njetsMax 30 
+#define nrjetsMax 10 
+#define nlepsMax 10
+
 using namespace std;
 
 class SimpleROOT : public edm::EDAnalyzer {
@@ -59,7 +63,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 
     private:
 	virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-        virtual void reset();
+//        virtual void reset();
         virtual bool isGoodMuon(const pat::Muon &mu);
         virtual bool isGoodElectron(const pat::Electron &el);
         virtual bool isGoodVertex(const reco::Vertex &PV);
@@ -72,130 +76,117 @@ class SimpleROOT : public edm::EDAnalyzer {
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
 	
-        // ---  CP1 --- 
+        // --- all ntuple vars end with "_" --- 
 	bool goodVtx_; 
 	unsigned short nVtx_; 
 
-        unsigned short nLeps_;
-        unsigned short nJets_;
-        unsigned short nRjets_;
-        unsigned short nPhos_;
-
-        float l1Pt_;         // leading lepton
-        float l2Pt_;         // trailing lepton
-        float l1Eta_;
-        float l2Eta_;
-        float l1Phi_;
-        float l2Phi_;
-        float l1Iso_;
-        float l2Iso_;
         float l1l2DPhi_;
         float l1l2DR_;
         float l1l2Pt_;
         float l1l2M_;
         float l1l2Eta_;
         float l1l2Phi_;
-     
-        float MET_;          // raw pf-met
-        float METPhi_;
-        float t1MET_;
-        float t1METPhi_;
+      
+        unsigned short nleps_;
+        float lepPt_            [nlepsMax]; 
+        float lepEta_           [nlepsMax]; 
+        float lepPhi_           [nlepsMax]; 
+        float lepM_             [nlepsMax];   
+        float lepIso_           [nlepsMax];
+        short lepID_            [nlepsMax];
+        bool  lepMatched_       [nlepsMax];   // real lepton of same ID & charge
+        bool  lepPrompt_        [nlepsMax];   // real lepton coming from W,Z, tau or SUSY particles
+        bool  lepHF_            [nlepsMax];   // real lepton from heavy flavor 
+
+        unsigned short njets_;
+        float jetPt_            [njetsMax]; 
+        float jetEta_           [njetsMax]; 
+        float jetPhi_           [njetsMax]; 
+        float jetM_             [njetsMax]; 
+        float jetBTag_          [njetsMax];
+
+        unsigned short nrjets_;
+        float rjetPt_           [nrjetsMax]; 
+        float rjetEta_          [nrjetsMax]; 
+        float rjetPhi_          [nrjetsMax]; 
+        float rjetM_            [nrjetsMax]; 
+        float rjetBTag_         [nrjetsMax];
+
+        float met_;          // raw pf-met
+        float metPhi_;
+        float t1met_;
+        float t1metPhi_;
         float sumEt_;
         float t1sumEt_;
 
-        float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -MET - l1l2] 
+        float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -met - l1l2] 
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
-        
-        short l1pdgID_;  // stores the produce of charge (+/-) and id (1,2) for (emu)
-        short l2pdgID_;  // i.e. -1 = electron +1 positron, -2 = muon
-      
+
+        unsigned short nPhos_;
 };
 
 SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
 {
-    // --- CP2 --- 
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
     events_->Branch("nVtx"             ,&nVtx_                  ,"nVtx/s");
-    events_->Branch("nLeps"            ,&nLeps_                 ,"nLeps/s");
-    events_->Branch("nJets"            ,&nJets_                 ,"nJets/s");
-    events_->Branch("nRjets"           ,&nRjets_                ,"nRjets/s");
-    events_->Branch("nPhos"            ,&nPhos_                 ,"nPhos/s");
-    events_->Branch("l1Pt"             ,&l1Pt_                  ,"l1Pt/F    ");
-    events_->Branch("l2Pt"             ,&l2Pt_                  ,"l2Pt/F    ");
-    events_->Branch("l1Eta"            ,&l1Eta_                 ,"l1Eta/F   ");
-    events_->Branch("l2Eta"            ,&l2Eta_                 ,"l2Eta/F   ");
-    events_->Branch("l1Phi"            ,&l1Phi_                 ,"l1Phi/F   ");
-    events_->Branch("l2Phi"            ,&l2Phi_                 ,"l2Phi/F   ");
-    events_->Branch("l1Iso"            ,&l1Iso_                 ,"l1Iso/F   ");
-    events_->Branch("l2Iso"            ,&l2Iso_                 ,"l2Iso/F   ");
-    events_->Branch("l1l2DPhi"         ,&l1l2DPhi_              ,"l1l2DPhi/F");
-    events_->Branch("l1l2DR"           ,&l1l2DR_                ,"l1l2DR/F  ");
-    events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F  ");
+
     events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F   ");
+    events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F  ");
     events_->Branch("l1l2Eta"          ,&l1l2Eta_               ,"l1l2Eta/F ");
     events_->Branch("l1l2Phi"          ,&l1l2Phi_               ,"l1l2Phi/F ");
-    events_->Branch("MET"              ,&MET_                   ,"MET/F     ");
-    events_->Branch("METPhi"           ,&METPhi_                ,"METPhi/F  ");
-    events_->Branch("t1MET"            ,&t1MET_                 ,"t1MET/F   ");
-    events_->Branch("t1METPhi"         ,&t1METPhi_              ,"t1METPhi/F");
+    events_->Branch("l1l2DPhi"         ,&l1l2DPhi_              ,"l1l2DPhi/F");
+    events_->Branch("l1l2DR"           ,&l1l2DR_                ,"l1l2DR/F  ");
+
+    events_->Branch("nleps"            ,&nleps_                 ,"nleps/s");
+    events_->Branch("lepPt"            ,lepPt_                  ,"lepPt[nleps]/F");
+    events_->Branch("lepEta"           ,lepEta_                 ,"lepEta[nleps]/F");
+    events_->Branch("lepPhi"           ,lepPhi_                 ,"lepPhi[nleps]/F");
+    events_->Branch("lepM"             ,lepM_                   ,"lepM[nleps]/F");
+    events_->Branch("lepIso"           ,lepIso_                 ,"lepIso[nleps]/F");
+    events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
+    events_->Branch("lepMatched"       ,lepMatched_             ,"lepMatched[nleps]/O");
+    events_->Branch("lepPrompt"        ,lepPrompt_              ,"lepPrompt[nleps]/O");
+    events_->Branch("lepIsHF"          ,lepHF_                  ,"lepIsHF[nleps]/O");
+
+    events_->Branch("njets"            ,&njets_                 ,"njets/s");
+    events_->Branch("jetPt"            ,jetPt_                  ,"jetPt[njets]/F");
+    events_->Branch("jetEta"           ,jetEta_                 ,"jetEta[njets]/F");
+    events_->Branch("jetPhi"           ,jetPhi_                 ,"jetPhi[njets]/F");
+    events_->Branch("jetM"             ,jetM_                   ,"jetM[njets]/F");
+    events_->Branch("jetBTag"          ,jetBTag_                ,"jetBTag[njets]/F");
+
+    events_->Branch("nrjets"            ,&nrjets_                ,"nrjets/s");
+    events_->Branch("rjetPt"            ,rjetPt_                 ,"rjetPt[nrjets]/F");
+    events_->Branch("rjetEta"           ,rjetEta_                ,"rjetEta[nrjets]/F");
+    events_->Branch("rjetPhi"           ,rjetPhi_                ,"rjetPhi[nrjets]/F");
+    events_->Branch("rjetM"             ,rjetM_                  ,"rjetM[nrjets]/F");
+    events_->Branch("rjetBTag"          ,rjetBTag_               ,"rjetBTag[nrjets]/F");
+
+
+    events_->Branch("nPhos"            ,&nPhos_                 ,"nPhos/s");
+    events_->Branch("met"              ,&met_                   ,"met/F     ");
+    events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F  ");
+    events_->Branch("t1met"            ,&t1met_                 ,"t1met/F   ");
+    events_->Branch("t1metPhi"         ,&t1metPhi_              ,"t1metPhi/F");
     events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F   ");
     events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F ");
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
-    events_->Branch("l1pdgID"          ,&l1pdgID_               ,"l1pdgID/S");
-    events_->Branch("l2pdgID"          ,&l2pdgID_               ,"l2pdgID/S");
+
+
+
     //events_->Branch(""          ,&               ,"");
 }
 
-void SimpleROOT::reset()
-{
-    // --- CP3--- 
-    goodVtx_                 = 0;
-    nVtx_                    = 0;
-    nLeps_                   = 0;
-    nJets_                   = 0;
-    nRjets_                  = 0;
-    nPhos_                   = 0;
-    l1Pt_                    = 0;         
-    l2Pt_                    = 0;         
-    l1Eta_                   = 0;
-    l2Eta_                   = 0;
-    l1Phi_                   = 0;
-    l2Phi_                   = 0;
-    l1Iso_                   = 0;
-    l2Iso_                   = 0;
-    l1l2DPhi_                = 0;
-    l1l2DR_                  = 0;
-    l1l2Pt_                  = 0;
-    l1l2M_                   = 0;
-    l1l2Eta_                 = 0;
-    l1l2Phi_                 = 0;
-    
-    MET_                     = 0;          
-    METPhi_                  = 0;
-    t1MET_                   = 0;
-    t1METPhi_                = 0;
-    sumEt_                   = 0;
-    t1sumEt_                 = 0;
-
-    vHT_                     = 0;            
-    t1vHT_                   = 0;         
-    jvHT_                    = 0;          
-    l1pdgID_                 = 0;
-    l2pdgID_                 = 0;
-}
 
 SimpleROOT::~SimpleROOT() {}
 
 // ------------ method called for each event  ------------
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-    reset(); // --- initialize all variables to be stored!
-
-    // --- get MiniAOD collections -- names of the collection are hard-coded (no need to read them from python as they don't change so frequently)
     edm::Handle<reco::VertexCollection> vertices;
     iEvent.getByLabel("offlineSlimmedPrimaryVertices", vertices);  
 
@@ -216,7 +207,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
-    vector<const reco::Candidate *> myRjets; // in this container we will all rejected prompt jets (PV) -- due to DR matching with myLeptons
+    vector<const reco::Candidate *> myRJets; // in this container we will all rejected prompt jets (PV) -- due to DR matching with myLeptons
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
 
     // --- loop inside the objects
@@ -242,7 +233,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         for(auto & lep: myLeptons) if( P4(lep).DeltaR( P4(&myjet) ) < DRmax ) isLeptonMatched = true;
 
 	if( isGoodJet(myjet) && !isLeptonMatched ) myJets.push_back(&myjet);
-	if( isGoodJet(myjet) && isLeptonMatched ) myRjets.push_back(&myjet);
+	if( isGoodJet(myjet) && isLeptonMatched ) myRJets.push_back(&myjet);
     }
 
     for (const pat::Photon &photon : *photons) 
@@ -251,72 +242,92 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     }
 
     const pat::MET &met = mets->front();
-    float rawMET      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
-    float rawMETPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
-    float rawMETSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
-    float t1MET       = met.pt();
-    float t1METPhi    = met.phi();
-    float t1METSumEt  = met.sumEt();
+    float rawmet      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
+    float rawmetPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
+    float rawmetSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
+    float t1met       = met.pt();
+    float t1metPhi    = met.phi();
+    float t1metSumEt  = met.sumEt();
 
     sortByPt(myLeptons);
     sortByPt(myJets);
-    sortByPt(myRjets);
+    sortByPt(myRJets);
     sortByPt(myPhotons);
 
-//    for(auto &mylep : myLeptons) cout << "mylep->pdgID() = " << mylep->pdgId() << endl;
- 
     TLorentzVector l1,l2;
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
     if(myLeptons.size() >=2) l2 = P4(myLeptons[1]);
 
-    TLorentzVector METVector, t1METVector;
-    METVector.SetPtEtaPhiE  (rawMET  , 0, rawMETPhi, rawMET );
-    t1METVector.SetPtEtaPhiE(t1MET   , 0, t1METPhi , t1MET  );
+    TLorentzVector metVector, t1metVector;
+    metVector.SetPtEtaPhiE  (rawmet  , 0, rawmetPhi, rawmet );
+    t1metVector.SetPtEtaPhiE(t1met   , 0, t1metPhi , t1met  );
 
     TLorentzVector HTVector, t1HTVector, jHTVector; 
    
-    HTVector   = -METVector -l1 -l2;
-    t1HTVector = -t1METVector -l1 -l2;
+    HTVector   = -metVector -l1 -l2;
+    t1HTVector = -t1metVector -l1 -l2;
     
     for(auto &myjet : myJets)    jHTVector += P4(myjet);
     for(auto &mylep : myLeptons) jHTVector -= P4(mylep);
 
-    // --- Fill branches CP4
+    // --- Fill TTree vars
     nVtx_                    = (unsigned short) vertices->size();
     goodVtx_                 = vtx.isValid() ? true:false;
-    nLeps_                   = (unsigned short) myLeptons.size();
-    nJets_                   = (unsigned short) myJets.size();
-    nRjets_                  = (unsigned short) myRjets.size();
-    nPhos_                   = (unsigned short) myPhotons.size();
 
-    l1Pt_                    = nLeps_>=1 ? l1.Pt() : 0;         
-    l2Pt_                    = nLeps_>=2 ? l2.Pt() : 0;         
-    l1Eta_                   = nLeps_>=1 && l1Pt_ >1.e-3 ? l1.Eta() : 0;
-    l2Eta_                   = nLeps_>=2 && l2Pt_ >1.e-3 ? l2.Eta() : 0;
-    l1Phi_                   = nLeps_>=1 ? l1.Phi() : 0;
-    l2Phi_                   = nLeps_>=2 ? l2.Phi() : 0;
-    l1Iso_                   = 0;
-    l2Iso_                   = 0;
-    l1l2DPhi_                = nLeps_>=2 ? l1.DeltaPhi(l2) : 0;
-    l1l2DR_                  = nLeps_>=2 ? l1.DeltaR(l2) : 0;
-    l1l2Pt_                  = nLeps_>=2 ? (l1+l2).Pt() : 0;
-    l1l2M_                   = nLeps_>=2 ? (l1+l2).M() : 0;
-    l1l2Eta_                 = nLeps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0;
-    l1l2Phi_                 = nLeps_>=2 ? (l1+l2).Phi() : 0;
+    nleps_                   = (unsigned short) myLeptons.size();
+    for(int ii = 0 ; ii < nlepsMax; ii++) 
+    {
+       	lepPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
+	lepEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
+	lepPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
+	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
+        lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId() : 0;
+        lepIso_     [ii]  = 0;  // TBI 
+        lepMatched_ [ii]  = 0;
+        lepPrompt_  [ii]  = 0;
+        lepHF_      [ii]  = 0;
+    }
     
-    MET_                     = rawMET;          
-    METPhi_                  = rawMETPhi;
-    sumEt_                   = rawMETSumEt;
-    t1MET_                   = t1MET;
-    t1METPhi_                = t1METPhi;
-    t1sumEt_                 = t1METSumEt;
+    l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
+    l1l2DR_                  = nleps_>=2 ? l1.DeltaR(l2) : 0;
+    l1l2Pt_                  = nleps_>=2 ? (l1+l2).Pt() : 0;
+    l1l2M_                   = nleps_>=2 ? (l1+l2).M() : 0;
+    l1l2Eta_                 = nleps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0;
+    l1l2Phi_                 = nleps_>=2 ? (l1+l2).Phi() : 0;
+
+    njets_                   = (unsigned short) myJets.size();
+    for(int ii = 0 ; ii < nlepsMax; ii++) 
+    {
+       	jetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
+	jetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
+	jetPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
+	jetM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
+        jetBTag_    [ii]  = 0;  // TBI 
+    }
+
+    nrjets_                   = (unsigned short) myJets.size();
+    for(int ii = 0 ; ii < nlepsMax; ii++) 
+    {
+       	rjetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
+	rjetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
+	rjetPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
+	rjetM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
+        rjetBTag_    [ii]  = 0;  // TBI 
+    }
+
+    nPhos_                   = (unsigned short) myPhotons.size();
+    
+    met_                     = rawmet;          
+    metPhi_                  = rawmetPhi;
+    sumEt_                   = rawmetSumEt;
+    t1met_                   = t1met;
+    t1metPhi_                = t1metPhi;
+    t1sumEt_                 = t1metSumEt;
 
     vHT_                     = HTVector.Pt();            
     t1vHT_                   = t1HTVector.Pt();         
     jvHT_                    = jHTVector.Pt();          
     
-    l1pdgID_                 = nLeps_ >=1 ? (unsigned short) myLeptons[0]->pdgId() : 0;
-    l2pdgID_                 = nLeps_ >=2 ? (unsigned short) myLeptons[1]->pdgId() : 0;
     events_->Fill();
 }
 
