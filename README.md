@@ -3,7 +3,7 @@
 This is a very simple MiniAOD analyzer producing a flat ROOT TTree for physics analysis,
 of leptons, photons, jets and MET.
 
-<b> How to install this at CERN:  </b>
+<h2> How to install this at CERN:  </h2>
 
 ssh username@lxplus.cern.ch  
 cd YourFavoriteDir  
@@ -17,17 +17,17 @@ cd SimpleROOT/
 cmsenv  
 scramv1 b  
 
-<b> The source file: </b>
+<h2> The source file: </h2>
 
 https://github.com/theofil/SimpleROOT/blob/master/plugins/SimpleROOT.cc
 
-<b> The config file: </b>
+<h2> The config file: </h2>
 
-https://github.com/theofil/SimpleROOT/blob/master/python/ConfFile_cfg.py
+https://github.com/theofil/SimpleROOT/blob/master/runme_cfg.py
 
-<b> How to produce a test ntuple at CERN: </b>
+<h2> How to produce a test ntuple at CERN: </h2>
 
 cd CMSSW_7_3_2/src/Tools/SimpleROOT
-cmsRun python/ConfFile_cfg.py
+cmsRun runme_cfg.py
 
 
