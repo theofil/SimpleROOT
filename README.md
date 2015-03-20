@@ -17,6 +17,14 @@ cd SimpleROOT/
 cmsenv  
 scramv1 b  
 
+<b> The source file: </b>
+
+https://github.com/theofil/SimpleROOT/blob/master/plugins/SimpleROOT.cc
+
+<b> The config file: </b>
+
+https://github.com/theofil/SimpleROOT/blob/master/python/ConfFile_cfg.py
+
 <b> How to produce a test ntuple at CERN: </b>
 
 cd CMSSW_7_3_2/src/Tools/SimpleROOT
