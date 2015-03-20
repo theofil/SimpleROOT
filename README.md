@@ -30,4 +30,15 @@ https://github.com/theofil/SimpleROOT/blob/master/runme_cfg.py
 cd CMSSW_7_3_2/src/Tools/SimpleROOT
 cmsRun runme_cfg.py
 
+<h4> Axioms </h4>
+<ul>
+<li> code should be intuitive and readable by anybody who knows English </li>
+<li> skipping events for any reason is not legal, save them all on disk even if ~empty </li>
+<li> be flat and use basic types for branches float, (unsigned) int,  (unsigned) short  and STD vectors </li>
+<li> be lazy in introducing new structures and classes, use what is already there in edm, reco, std, ROOT namespaces</li>
+<li> be laconic and use smart commands when possible C++11 </li>
+<li> event selection and logic should be undisturbed by technicalities </li>
+<li> using int when short is OK is not OK, double is forbidden</li>
+</ul>
+
 
