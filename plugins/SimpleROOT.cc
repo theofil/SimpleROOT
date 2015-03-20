@@ -59,6 +59,10 @@ class SimpleROOT : public edm::EDAnalyzer {
 	bool goodVtx_; 
 	unsigned short nVtx_; 
 
+        unsigned long eventNum_;
+        unsigned int runNum_;
+        unsigned int lumi_;
+
         float l1l2DPhi_;
         float l1l2DR_;
         float l1l2Pt_;
@@ -110,6 +114,9 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
     events_->Branch("nVtx"             ,&nVtx_                  ,"nVtx/s");
+    events_->Branch("eventNum"         ,&eventNum_              ,"eventNum/l");
+    events_->Branch("runNum"           ,&runNum_                ,"runNum/i");
+    events_->Branch("lumi"             ,&lumi_                  ,"lumi/i");
 
     events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F   ");
     events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F  ");
@@ -136,12 +143,12 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("jetM"             ,jetM_                   ,"jetM[njets]/F");
     events_->Branch("jetBTag"          ,jetBTag_                ,"jetBTag[njets]/F");
 
-    events_->Branch("nrjets"            ,&nrjets_                ,"nrjets/s");
-    events_->Branch("rjetPt"            ,rjetPt_                 ,"rjetPt[nrjets]/F");
-    events_->Branch("rjetEta"           ,rjetEta_                ,"rjetEta[nrjets]/F");
-    events_->Branch("rjetPhi"           ,rjetPhi_                ,"rjetPhi[nrjets]/F");
-    events_->Branch("rjetM"             ,rjetM_                  ,"rjetM[nrjets]/F");
-    events_->Branch("rjetBTag"          ,rjetBTag_               ,"rjetBTag[nrjets]/F");
+    events_->Branch("nrjets"           ,&nrjets_                ,"nrjets/s");
+    events_->Branch("rjetPt"           ,rjetPt_                 ,"rjetPt[nrjets]/F");
+    events_->Branch("rjetEta"          ,rjetEta_                ,"rjetEta[nrjets]/F");
+    events_->Branch("rjetPhi"          ,rjetPhi_                ,"rjetPhi[nrjets]/F");
+    events_->Branch("rjetM"            ,rjetM_                  ,"rjetM[nrjets]/F");
+    events_->Branch("rjetBTag"         ,rjetBTag_               ,"rjetBTag[nrjets]/F");
 
 
     events_->Branch("nPhos"            ,&nPhos_                 ,"nPhos/s");
@@ -252,6 +259,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     // --- Fill TTree vars
     nVtx_                    = (unsigned short) vertices->size();
     goodVtx_                 = vtx.isValid() ? true:false;
+
+    runNum_                  = iEvent.id().run();
+    lumi_                    = iEvent.luminosityBlock();
+    eventNum_                = iEvent.id().event();
 
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
