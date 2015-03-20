@@ -1,8 +1,9 @@
 # SimpleROOT
-This is a very simple MiniAOD analyzer producing a flat ROOT TTree for the edgeZ analysis.  
 
-How to install this at CERN:  
+This is a very simple MiniAOD analyzer producing a flat ROOT TTree for physics analysis,
+of leptons, photons, jets and MET.
 
+<b> How to install this at CERN:  </b>
 
 ssh username@lxplus.cern.ch  
 cd YourFavoriteDir  
@@ -15,5 +16,10 @@ git clone https://github.com/theofil/SimpleROOT.git
 cd SimpleROOT/  
 cmsenv  
 scramv1 b  
+
+<b> How to produce a test ntuple at CERN: </b>
+
+cd CMSSW_7_3_2/src/Tools/SimpleROOT
+cmsRun python/ConfFile_cfg.py
 
 
