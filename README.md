@@ -35,10 +35,12 @@ cmsRun runme_cfg.py
 <li> code should be intuitive and readable by anybody who knows English </li>
 <li> skipping events for any reason is not legal, save them all on disk even if ~empty </li>
 <li> be flat and use basic types for branches float, (unsigned) int,  (unsigned) short  and STD vectors </li>
-<li> be lazy in introducing new structures and classes, use what is already there in edm, reco, std, ROOT namespaces</li>
-<li> be laconic and use smart commands when possible C++11 </li>
+<li> be lazy in introducing new structures and classes, avoid over-structuring </li>
+<li> use what is already there in edm, reco, std & ROOT namespaces</li>
+<li> be laconic, use smart commands when possible C++11 </li>
 <li> event selection and logic should be undisturbed by technicalities </li>
 <li> using int when short is OK is not OK, double is forbidden</li>
+<li> keep number of lines minimum, gather everything in a single file </b>
 </ul>
 
 

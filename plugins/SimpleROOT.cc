@@ -2,33 +2,12 @@
 //
 // Package:    Tools/SimpleROOT
 // Class:      SimpleROOT
-// 
-/**\class SimpleROOT SimpleROOT.cc Tools/SimpleROOT/plugins/SimpleROOT.cc
-
- Description: [one line class summary]
-
- Implementation:
-     [Notes on implementation]
-*/
 //
 // Original Author:  Konstantinos Theofilatos
 //         Created:  Fri, 20 Feb 2015 16:08:35 GMT
-
-// many thanks to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookMiniAOD
-//
-// Principles
-//
-// 1) producer's code should be intuitive and readable by anybody who knows English
-// 2) don't skip any event for any reason, save them all on disk even if ~empty
-// 3) be flat and use basic types for brances float, (unsigned) int,  (unsigned) short  and STD vectors
-// 4) don't introduce new structures and classes, unless it's not possible to go ahead without them
-// 5) be laconic and use smart commands when possible C++11, exploit ROOT buildin and STD
-// 6) event selection and logic should be undisturbed by technicalities
-// 7) don't use int when short is OK, double is forbidden
+// with many thanks to https://twiki.cern.ch/twiki/bin/view/CMSPublic/WorkBookMiniAOD
 
 #include <memory>
-
-// user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDAnalyzer.h"
 
