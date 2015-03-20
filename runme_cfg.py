@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-process = cms.Process("Demo")
+process = cms.Process("demo")
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
 
