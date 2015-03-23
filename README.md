@@ -30,7 +30,7 @@ https://github.com/theofil/SimpleROOT/blob/master/runme_cfg.py
 cd CMSSW_7_3_2/src/Tools/SimpleROOT
 cmsRun runme_cfg.py
 
-<h4> Axioms </h4>
+<h4> Dogma </h4>
 <ul>
 <li> code should be intuitive and readable by anybody who knows English </li>
 <li> skipping events for any reason is not legal, save them all on disk even if ~empty </li>
