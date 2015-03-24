@@ -26,6 +26,8 @@
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
 
+#include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
+
 #include "TTree.h"
 #include "TLorentzVector.h"
 
@@ -102,11 +104,14 @@ class SimpleROOT : public edm::EDAnalyzer {
         float sumEt_;
         float t1sumEt_;
 
+        float rho_;
+        float nPU_;
+
         float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -met - l1l2] 
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
 
-        unsigned short nPhos_;
+        unsigned short nphos_;
 };
 
 SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
@@ -118,12 +123,12 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("runNum"           ,&runNum_                ,"runNum/i");
     events_->Branch("lumi"             ,&lumi_                  ,"lumi/i");
 
-    events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F   ");
-    events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F  ");
-    events_->Branch("l1l2Eta"          ,&l1l2Eta_               ,"l1l2Eta/F ");
-    events_->Branch("l1l2Phi"          ,&l1l2Phi_               ,"l1l2Phi/F ");
+    events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F");
+    events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F");
+    events_->Branch("l1l2Eta"          ,&l1l2Eta_               ,"l1l2Eta/F");
+    events_->Branch("l1l2Phi"          ,&l1l2Phi_               ,"l1l2Phi/F");
     events_->Branch("l1l2DPhi"         ,&l1l2DPhi_              ,"l1l2DPhi/F");
-    events_->Branch("l1l2DR"           ,&l1l2DR_                ,"l1l2DR/F  ");
+    events_->Branch("l1l2DR"           ,&l1l2DR_                ,"l1l2DR/F");
 
     events_->Branch("nleps"            ,&nleps_                 ,"nleps/s");
     events_->Branch("lepPt"            ,lepPt_                  ,"lepPt[nleps]/F");
@@ -151,13 +156,17 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("rjetBTag"         ,rjetBTag_               ,"rjetBTag[nrjets]/F");
 
 
-    events_->Branch("nPhos"            ,&nPhos_                 ,"nPhos/s");
-    events_->Branch("met"              ,&met_                   ,"met/F     ");
-    events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F  ");
-    events_->Branch("t1met"            ,&t1met_                 ,"t1met/F   ");
+    events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
+    events_->Branch("met"              ,&met_                   ,"met/F");
+    events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F");
+    events_->Branch("t1met"            ,&t1met_                 ,"t1met/F");
     events_->Branch("t1metPhi"         ,&t1metPhi_              ,"t1metPhi/F");
-    events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F   ");
-    events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F ");
+    events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F");
+    events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F");
+
+    events_->Branch("rho"              ,&rho_                   ,"rho/F");
+    events_->Branch("nPU"              ,&nPU_                   ,"nPU/F");
+
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
@@ -190,6 +199,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     edm::Handle<pat::PhotonCollection> photons;
     iEvent.getByLabel("slimmedPhotons", photons);
+
+    edm::Handle<double> rhoH;
+    iEvent.getByLabel("fixedGridRhoFastjetAll",rhoH);
+
+    edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
+    iEvent.getByLabel("addPileupInfo", pileup);
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
@@ -255,6 +270,17 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     
     for(auto &myjet : myJets)    jHTVector += P4(myjet);
     for(auto &mylep : myLeptons) jHTVector -= P4(mylep);
+ 
+    // --- get pileup info 
+    float nPU = 0;
+    for( auto & pu : *pileup)
+    { 
+	if(pu.getBunchCrossing() == 0) 
+	{
+	    nPU     =  pu.getPU_NumInteractions();
+            //nPUTrue_ =  pu.getTrueNumInteractions(); 
+	}
+    }
 
     // --- Fill TTree vars
     nVtx_                    = (unsigned short) vertices->size();
@@ -273,9 +299,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
         lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId() : 0;
         lepIso_     [ii]  = 0;  // TBI 
-        lepMatched_ [ii]  = 0;
-        lepPrompt_  [ii]  = 0;
-        lepHF_      [ii]  = 0;
+        lepMatched_ [ii]  = 0;  // TBI
+        lepPrompt_  [ii]  = 0;  // TBI
+        lepHF_      [ii]  = 0;  // TBI
     }
     
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
@@ -305,7 +331,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         rjetBTag_    [ii]  = 0;  // TBI 
     }
 
-    nPhos_                   = (unsigned short) myPhotons.size();
+    nphos_                   = (unsigned short) myPhotons.size();
     
     met_                     = rawmet;          
     metPhi_                  = rawmetPhi;
@@ -318,6 +344,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     t1vHT_                   = t1HTVector.Pt();         
     jvHT_                    = jHTVector.Pt();          
     
+    rho_                     = (float) (*rhoH);
+
+    nPU_                     = nPU; 
+
     events_->Fill();
 }
 
