@@ -28,6 +28,8 @@
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+
 #include "TTree.h"
 #include "TLorentzVector.h"
 
@@ -37,14 +39,15 @@
 
 using namespace std;
 
+
 class SimpleROOT : public edm::EDAnalyzer {
     public:
     	explicit SimpleROOT(const edm::ParameterSet&);
       	~SimpleROOT();
 
     private:
+
 	virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
-//        virtual void reset();
         virtual bool isGoodMuon(const pat::Muon &mu);
         virtual bool isGoodElectron(const pat::Electron &el);
         virtual bool isGoodVertex(const reco::Vertex &PV);
@@ -52,7 +55,19 @@ class SimpleROOT : public edm::EDAnalyzer {
         virtual bool isGoodPhoton(const pat::Photon &myPhoton);
         virtual void sortByPt(vector<const reco::Candidate *> myRecoCand);
 
+//        float MuonRelIso(const pat::Muon &mu);
+        float ElectronRelIso(const pat::Electron &el);
+
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
+
+    	edm::Handle<reco::VertexCollection> vertices;
+   	edm::Handle<pat::MuonCollection> muons;
+     	edm::Handle<pat::ElectronCollection> electrons;
+        edm::Handle<pat::JetCollection> jets;
+        edm::Handle<pat::METCollection> mets;
+        edm::Handle<pat::PhotonCollection> photons;
+        edm::Handle<double> rhoH;
+        edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
 
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
@@ -182,28 +197,13 @@ SimpleROOT::~SimpleROOT() {}
 // ------------ method called for each event  ------------
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-    edm::Handle<reco::VertexCollection> vertices;
     iEvent.getByLabel("offlineSlimmedPrimaryVertices", vertices);  
-
-    edm::Handle<pat::MuonCollection> muons;
     iEvent.getByLabel("slimmedMuons", muons);
-
-    edm::Handle<pat::ElectronCollection> electrons;
     iEvent.getByLabel("slimmedElectrons", electrons);
-
-    edm::Handle<pat::JetCollection> jets;
     iEvent.getByLabel("slimmedJets", jets);
-   
-    edm::Handle<pat::METCollection> mets;
     iEvent.getByLabel("slimmedMETs", mets);
-
-    edm::Handle<pat::PhotonCollection> photons;
     iEvent.getByLabel("slimmedPhotons", photons);
-
-    edm::Handle<double> rhoH;
     iEvent.getByLabel("fixedGridRhoFastjetAll",rhoH);
-
-    edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
     iEvent.getByLabel("addPileupInfo", pileup);
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
@@ -389,12 +389,38 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     return res;
 }
 
+float SimpleROOT::ElectronRelIso(const pat::Electron &el)
+{
+    float relIsoWithEA = 0;
+    // Effective areas for electrons from Giovanni P. and Cristina
+    // distributed as private slides in Jan 2015, derived for PHYS14
+    // code below was borrowed from Ilya Kravchenko
+    const int nEtaBins = 5; 
+    const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
+    const float effectiveAreaValues[nEtaBins] = {0.1013, 0.0988, 0.0572, 0.0842, 0.1530};
+
+    reco::GsfElectron::PflowIsolationVariables pfIso = el.pfIsolationVariables();
+    float etaSC = el.superCluster()->eta();
+
+    // Compute isolation with effective area correction for PU
+    // Find eta bin first. If eta>2.5, the last eta bin is used.
+    int etaBin = 0;
+    while(etaBin < nEtaBins-1 && abs(etaSC) > etaBinLimits[etaBin+1])  ++etaBin;
+
+    float area = effectiveAreaValues[etaBin];
+    relIsoWithEA = (float)( pfIso.sumChargedHadronPt + max(0.0, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - (*rhoH) * area ) )/el.pt();
+
+    return relIsoWithEA;
+}
+
 bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
     if(el.pt() < 10) res = false;
-    if(fabs(el.eta()) > 2.4) res = false;
+    if(fabs(el.eta()) > 2.4 && res == true) res = false;
+    if(el.superCluster()->eta() > 1.4442 && el.superCluster()->eta() < 1.5660 && res == true) res=false;
+    if(ElectronRelIso(el) < 0.3 && res == true) res = false;
 
     return res;
 }
