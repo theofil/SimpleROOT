@@ -40,7 +40,7 @@ root -l output.root
 demo->cd() 
 TCut sel_SF("(lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)")
 TCut sel_lep2020("l1l2DR>0.3 && lepPt[1]>20")
-TCut sel_lepCE("abs(lepEta[0])<1.4 && abs(lepEta[1])<1.4")
+TCut sel_lepCE("abs(lepEta[0])\<1.4 && abs(lepEta[1])\<1.4")
 events->Draw("l1l2M",sel_SF && sel_lep2020 && sel_lepCE,"hist") 
 </code>
 </pre>
