@@ -34,13 +34,13 @@ cmsRun runme_cfg.py
 
 Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root"> file <a/> 
 
+<pre>
 <code>
 root -l output.root 
-
 demo->cd() 
-
 events->Draw("l1l2M"," l1l2DR>0.3 && lepPt[1]>20 && abs(lepEta[0])<1.4 && abs(lepEta[1])<1.4 && (lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)","hist") <br>
 </code>
+</pre>
 
 <h4> Dogma </h4>
 <ul>
