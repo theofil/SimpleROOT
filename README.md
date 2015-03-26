@@ -41,16 +41,15 @@ demo->cd()
 
 TCut sel_SF("(lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)")
 TCut sel_lep2020("l1l2DR>0.3 && lepPt[1]>20")
-TCut sel_lepCE("abs(lepEta[0]) <1.4 && abs(lepEta[1])\<1.4")
-
-events->Draw("l1l2M",sel_SF && sel_lep2020 && sel_lepCE,"hist") 
+events->Draw("l1l2M",sel_SF && sel_lep2020,"hist") 
+events->Show(3)
 </code>
 </pre>
 
 
 <pre>
-<code>
-root [5] events->Show(3)
+<samp>
+
 ======> EVENT:3
  goodVtx         = 1
  nVtx            = 23
@@ -106,9 +105,9 @@ root [5] events->Show(3)
  vHT             = 11.6015
  t1vHT           = 14.1531
  jvHT            = 60.6142
-
-</code>
+</samp>
 </pre>
+
 <h4> Dogma </h4>
 <ul>
 <li> code should be intuitive and readable by anybody who knows English </li>
