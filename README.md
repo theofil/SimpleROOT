@@ -32,7 +32,8 @@ cmsRun runme_cfg.py
 
 <h4> How an ntuple looks like ? </h4>
 
-Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root"> file <a/> 
+Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root">file</a>, which is from running on 49509 events of 
+<code>/store/mc/Phys14DR/DYJetsToLL_M-50_13TeV-madgraph-pythia8/MINIAODSIM/PU20bx25_PHYS14_25_V1-v1/00000/FEE3CF68-796C-E411-ABF5-002590DB9214.root</code> 
 
 <pre>
 <code>
