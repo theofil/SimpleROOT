@@ -30,6 +30,16 @@ https://github.com/theofil/SimpleROOT/blob/master/runme_cfg.py
 cd CMSSW_7_3_2/src/Tools/SimpleROOT
 cmsRun runme_cfg.py
 
+<h4> How an ntuple looks like ? </h4>
+
+Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root"> file <a/> 
+
+<body bgcolor="silver">
+root -l output.root
+demo->cd()
+events->Draw("l1l2M"," l1l2DR>0.3 && lepPt[1]>20 && abs(lepEta[0])<1.4 && abs(lepEta[1])<1.4 && (lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)","hist")
+</body>
+
 <h4> Dogma </h4>
 <ul>
 <li> code should be intuitive and readable by anybody who knows English </li>
