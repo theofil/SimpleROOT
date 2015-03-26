@@ -38,10 +38,74 @@ Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root"> file
 <code>
 root -l output.root 
 demo->cd() 
-events->Draw("l1l2M"," l1l2DR>0.3 && lepPt[1]>20 && abs(lepEta[0])<1.4 && abs(lepEta[1])<1.4 && (lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)","hist") <br>
+TCut sel_SF("(lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)")
+TCut sel_lep2020("l1l2DR>0.3 && lepPt[1]>20")
+TCut sel_lepCentral("abs(lepEta[0])<1.4 && abs(lepEta[1])<1.4")
+events->Draw("l1l2M",sel_SF && sel_lep2020 && sel_lepCentral,"hist") 
 </code>
 </pre>
 
+<pre>
+<code>
+root [5] events->Show(3)
+======> EVENT:3
+ goodVtx         = 1
+ nVtx            = 23
+ eventNum        = 1001324
+ runNum          = 1
+ lumi            = 10020
+ l1l2M           = 91.1683
+ l1l2Pt          = 26.7699
+ l1l2Eta         = -2.59355
+ l1l2Phi         = 0.80909
+ l1l2DPhi        = -2.34752
+ l1l2DR          = 2.9592
+ nleps           = 2
+ lepPt           = 37.2818, 
+                  29.2314
+ lepEta          = -2.19965, 
+                  -0.397985
+ lepPhi          = -0.0836522, 
+                  2.26387
+ lepM            = 0.13957, 
+                  0.13957
+ lepIso          = 0, 
+                  0
+ lepID           = 13, 
+                  -13
+ lepMatched      = 0, 
+                  0
+ lepPrompt       = 0, 
+                  0
+ lepIsHF         = 0, 
+                  0
+ njets           = 1
+ jetPt           = 37.2818
+ jetEta          = -2.19965
+ jetPhi          = -0.0836522
+ jetM            = 0.13957
+ jetBTag         = 0
+ nrjets          = 1
+ rjetPt          = 37.2818
+ rjetEta         = -2.19965
+ rjetPhi         = -0.0836522
+ rjetM           = 0.13957
+ rjetBTag        = 0
+ nphos           = 0
+ met             = 26.6696
+ metPhi          = -1.89484
+ t1met           = 28.8569
+ t1metPhi        = -1.82337
+ sumEt           = 1136.63
+ t1sumEt         = 1164.45
+ rho             = 12.8935
+ nPU             = 30
+ vHT             = 11.6015
+ t1vHT           = 14.1531
+ jvHT            = 60.6142
+
+</code>
+</pre>
 <h4> Dogma </h4>
 <ul>
 <li> code should be intuitive and readable by anybody who knows English </li>
