@@ -58,6 +58,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         float MuonRelIso(const reco::Candidate *cand);
         float ElectronRelIso(const reco::Candidate *cand);
         float LeptonRelIso(const reco::Candidate *cand){return cand->isElectron() ? ElectronRelIso(cand) : MuonRelIso(cand);}
+  
+        float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -96,6 +98,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float lepPhi_           [nlepsMax]; 
         float lepM_             [nlepsMax];   
         float lepIso_           [nlepsMax];
+        float lepPtRel_         [nlepsMax];
         short lepID_            [nlepsMax];
         bool  lepMatched_       [nlepsMax];   // real lepton of same ID & charge
         bool  lepPrompt_        [nlepsMax];   // real lepton coming from W,Z, tau or SUSY particles
@@ -154,6 +157,7 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("lepPhi"           ,lepPhi_                 ,"lepPhi[nleps]/F");
     events_->Branch("lepM"             ,lepM_                   ,"lepM[nleps]/F");
     events_->Branch("lepIso"           ,lepIso_                 ,"lepIso[nleps]/F");
+    events_->Branch("lepPtRel"         ,lepPtRel_               ,"lepPtRel[nleps]/F");
     events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
     events_->Branch("lepMatched"       ,lepMatched_             ,"lepMatched[nleps]/O");
     events_->Branch("lepPrompt"        ,lepPrompt_              ,"lepPrompt[nleps]/O");
@@ -302,6 +306,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()       : 0;
         lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()      : 0;
         lepIso_     [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii]) : 0;  
+        lepPtRel_   [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets): 1.e+5;  
         lepMatched_ [ii]  = 0;  // TBI
         lepPrompt_  [ii]  = 0;  // TBI
         lepHF_      [ii]  = 0;  // TBI
@@ -494,6 +499,18 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
         }
     }
     return res;
+}
+
+float SimpleROOT::PtRel(const reco::Candidate *myLepton, vector<const reco::Candidate *> myJets)
+{
+    float myPtRel = 1.e+5;
+    for(auto & myJet: myJets)
+    {
+	float ptrel = P4(myLepton).Perp(P4(myJet).Vect());
+	myPtRel = ptrel < myPtRel ? ptrel : myPtRel;
+    }
+
+    return myPtRel;
 }
 
 bool SimpleROOT::isGoodVertex(const reco::Vertex &vtx)
