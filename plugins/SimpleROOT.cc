@@ -70,6 +70,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<double> rhoH;
         edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
 
+        reco::Vertex vtx; // stores event's primary vertex
+
 	edm::Service<TFileService> fileService_; 
 	TTree *events_;
 	
@@ -213,7 +215,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
 
     // --- loop inside the objects
-    reco::Vertex vtx;
     for (const reco::Vertex &PV : *vertices)
     {
 	if( isGoodVertex(PV) ){ vtx = PV; break;} // get first good vertex 
@@ -387,6 +388,7 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
 
     if(mu.pt() < 10) res = false; 
     if(fabs(mu.eta()) > 2.4) res = false;
+    if(!mu.isTightMuon(vtx)) res = false;
 
     return res;
 }
@@ -394,10 +396,22 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
 
 float SimpleROOT::MuonRelIso(const reco::Candidate *cand)
 {
-    float relIso = 0.001;
+    float relIsoWithEA = 0.001;
     pat::Muon mu = *((pat::Muon*)cand);  
-    // TBI
-    return relIso;
+    // Effective areas from https://indico.cern.ch/event/367861/contribution/2/material/slides/0.pdf
+    const int nEtaBins = 5; 
+    const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
+    const float effectiveAreaValues[nEtaBins] = {0.0913, 0.0765, 0.0546, 0.0728, 0.1177};
+
+    reco::MuonPFIsolation pfIso =  mu.pfIsolationR03();
+    // Find eta bin first. If eta>2.5, the last eta bin is used.
+    int etaBin = 0;
+    while(etaBin < nEtaBins-1 && abs(mu.eta()) > etaBinLimits[etaBin+1])  ++etaBin;
+
+    float area = effectiveAreaValues[etaBin];
+    relIsoWithEA = (float)( pfIso.sumChargedHadronPt + max(0.0, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - (*rhoH) * area ) )/mu.pt();
+
+    return relIsoWithEA;
 }
 
 
