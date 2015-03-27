@@ -55,8 +55,9 @@ class SimpleROOT : public edm::EDAnalyzer {
         virtual bool isGoodPhoton(const pat::Photon &myPhoton);
         virtual void sortByPt(vector<const reco::Candidate *> myRecoCand);
 
-//        float MuonRelIso(const pat::Muon &mu);
-        float ElectronRelIso(const pat::Electron &el);
+        float MuonRelIso(const reco::Candidate *cand);
+        float ElectronRelIso(const reco::Candidate *cand);
+        float LeptonRelIso(const reco::Candidate *cand){return cand->isElectron() ? ElectronRelIso(cand) : MuonRelIso(cand);}
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -291,14 +292,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     eventNum_                = iEvent.id().event();
 
     nleps_                   = (unsigned short) myLeptons.size();
+    
     for(int ii = 0 ; ii < nlepsMax; ii++) 
     {
-       	lepPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
-	lepEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
-	lepPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
-	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
-        lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId() : 0;
-        lepIso_     [ii]  = 0;  // TBI 
+       	lepPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()         : 0;
+	lepEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()        : 0;
+	lepPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()        : 0;
+	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()       : 0;
+        lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()      : 0;
+        lepIso_     [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii]) : 0;  
         lepMatched_ [ii]  = 0;  // TBI
         lepPrompt_  [ii]  = 0;  // TBI
         lepHF_      [ii]  = 0;  // TBI
@@ -389,12 +391,21 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     return res;
 }
 
-float SimpleROOT::ElectronRelIso(const pat::Electron &el)
+
+float SimpleROOT::MuonRelIso(const reco::Candidate *cand)
+{
+    float relIso = 0.001;
+    pat::Muon mu = *((pat::Muon*)cand);  
+    // TBI
+    return relIso;
+}
+
+
+float SimpleROOT::ElectronRelIso(const reco::Candidate *cand)
 {
     float relIsoWithEA = 0;
-    // Effective areas for electrons from Giovanni P. and Cristina
-    // distributed as private slides in Jan 2015, derived for PHYS14
-    // code below was borrowed from Ilya Kravchenko
+    pat::Electron el = *((pat::Electron*)cand);  
+    // Effective areas from https://indico.cern.ch/event/367861/contribution/2/material/slides/0.pdf
     const int nEtaBins = 5; 
     const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
     const float effectiveAreaValues[nEtaBins] = {0.1013, 0.0988, 0.0572, 0.0842, 0.1530};
@@ -402,7 +413,6 @@ float SimpleROOT::ElectronRelIso(const pat::Electron &el)
     reco::GsfElectron::PflowIsolationVariables pfIso = el.pfIsolationVariables();
     float etaSC = el.superCluster()->eta();
 
-    // Compute isolation with effective area correction for PU
     // Find eta bin first. If eta>2.5, the last eta bin is used.
     int etaBin = 0;
     while(etaBin < nEtaBins-1 && abs(etaSC) > etaBinLimits[etaBin+1])  ++etaBin;
@@ -417,11 +427,58 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
+    bool isEB      = el.superCluster()->eta() < 1.4442 ? 1 : 0; 
+    bool isEE      = el.superCluster()->eta() > 1.5660 ? 1 : 0;
+    bool isEBEEGap = el.superCluster()->eta() > 1.4442 && el.superCluster()->eta() < 1.5660 ? 1 : 0;
+
     if(el.pt() < 10) res = false;
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
-    if(el.superCluster()->eta() > 1.4442 && el.superCluster()->eta() < 1.5660 && res == true) res=false;
-    if(ElectronRelIso(el) < 0.3 && res == true) res = false;
+    if(isEBEEGap && res==true) res=false;
 
+    if(res) 
+    {
+        // --- https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#PHYS14_selection_all_conditions  (v13)
+        // --- https://indico.cern.ch/event/292938/  {Loose ID w/o isolation | Phys14}
+        // --- http://cmslxr.fnal.gov/source/DataFormats/EgammaCandidates/interface/GsfElectron.h?v=CMSSW_7_3_2
+        float  trackMomentumAtVtx               = (float)sqrt(el.trackMomentumAtVtx().mag2());
+        float  ecalEnergy                       = (float)el.ecalEnergy();
+    
+        float  full5x5_sigmaIetaIeta            = (float)el.full5x5_sigmaIetaIeta();
+        float  dEtaIn                           = (float)el.deltaEtaSuperClusterTrackAtVtx();
+        float  dPhiIn                           = (float)el.deltaPhiSuperClusterTrackAtVtx();
+        float  HoE                              = (float)el.hadronicOverEm();
+        float  ooEmooP                          = (float)fabs(1/ecalEnergy - 1/trackMomentumAtVtx);
+        float  d0                               = (float)el.gsfTrack()->dxy();
+        float  dz                               = (float)el.gsfTrack()->dz();
+        int    expectedMissingInnerHits         = el.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS);
+        bool   passConversionVeto               = el.passConversionVeto(); 
+    
+        if(isEB)
+        {
+    	    if(res && full5x5_sigmaIetaIeta         >  0.010557)res=false;    
+	    if(res && fabs(dEtaIn)                  >  0.012442)res=false;                   
+            if(res && fabs(dPhiIn)                  >  0.072624)res=false;                   
+            if(res && HoE                           >  0.121476)res=false; 
+            if(res && ooEmooP                       >  0.221803)res=false; 
+            if(res && d0                            >  0.022664)res=false; 
+            if(res && dz                            >  0.173670)res=false; 
+            if(res && expectedMissingInnerHits      >= 2       )res=false;
+            if(res && passConversionVeto            == false   )res=false;
+	}
+
+        if(isEE)
+        {
+    	    if(res && full5x5_sigmaIetaIeta         >  0.032602)res=false;    
+	    if(res && fabs(dEtaIn)                  >  0.010654)res=false;                   
+            if(res && fabs(dPhiIn)                  >  0.145129)res=false;                   
+            if(res && HoE                           >  0.131862)res=false; 
+            if(res && ooEmooP                       >  0.142283)res=false; 
+            if(res && d0                            >  0.097358)res=false; 
+            if(res && dz                            >  0.198444)res=false; 
+            if(res && expectedMissingInnerHits      >= 2       )res=false;
+            if(res && passConversionVeto            == false   )res=false;
+        }
+    }
     return res;
 }
 
