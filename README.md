@@ -108,6 +108,12 @@ events->Show(3)
 </samp>
 </pre>
 
+<h4> Missing elements </h4>
+<ul>
+<li> GEN information and matching to RECO </li>
+<li> trigger bits </li>
+</ul>
+
 <h4> Dogma </h4>
 <ul>
 <li> code should be intuitive and readable by anybody who knows English </li>

@@ -510,6 +510,8 @@ float SimpleROOT::PtRel(const reco::Candidate *myLepton, vector<const reco::Cand
 	myPtRel = ptrel < myPtRel ? ptrel : myPtRel;
     }
 
+    if(myJets.size() == 0) myPtRel = 0;
+
     return myPtRel;
 }
 
