@@ -446,9 +446,9 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
-    bool isEB      = el.superCluster()->eta() < 1.4442 ? 1 : 0; 
-    bool isEE      = el.superCluster()->eta() > 1.5660 ? 1 : 0;
-    bool isEBEEGap = el.superCluster()->eta() > 1.4442 && el.superCluster()->eta() < 1.5660 ? 1 : 0;
+    bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
+    bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
+    bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
 
     if(el.pt() < 10) res = false;
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
