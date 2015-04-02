@@ -25,17 +25,19 @@
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/PatCandidates/interface/Photon.h"
+#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+#include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
-
-#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 
 #include "TTree.h"
 #include "TLorentzVector.h"
 
+
 #define njetsMax 30 
 #define nrjetsMax 10 
 #define nlepsMax 10
+#define ngenlepsMax 10
 
 using namespace std;
 
@@ -71,6 +73,18 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<pat::PhotonCollection> photons;
         edm::Handle<double> rhoH;
         edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
+        edm::Handle<edm::View<reco::GenParticle>> pruned;
+
+        
+    	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
+   	edm::EDGetTokenT<pat::MuonCollection> muonsToken;
+     	edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
+        edm::EDGetTokenT<pat::JetCollection> jetsToken;
+        edm::EDGetTokenT<pat::METCollection> metsToken;
+        edm::EDGetTokenT<pat::PhotonCollection> photonsToken;
+        edm::EDGetTokenT<double> rhoHToken;
+        edm::EDGetTokenT<edm::View<PileupSummaryInfo>> pileupToken;
+        edm::EDGetTokenT<edm::View<reco::GenParticle>> prunedToken;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -93,30 +107,36 @@ class SimpleROOT : public edm::EDAnalyzer {
         float l1l2Phi_;
       
         unsigned short nleps_;
-        float lepPt_            [nlepsMax]; 
-        float lepEta_           [nlepsMax]; 
-        float lepPhi_           [nlepsMax]; 
-        float lepM_             [nlepsMax];   
-        float lepIso_           [nlepsMax];
-        float lepPtRel_         [nlepsMax];
-        short lepID_            [nlepsMax];
-        bool  lepMatched_       [nlepsMax];   // real lepton of same ID & charge
-        bool  lepPrompt_        [nlepsMax];   // real lepton coming from W,Z, tau or SUSY particles
-        bool  lepHF_            [nlepsMax];   // real lepton from heavy flavor 
+        float lepPt_                      [nlepsMax]; 
+        float lepEta_                     [nlepsMax]; 
+        float lepPhi_                     [nlepsMax]; 
+        float lepM_                       [nlepsMax];   
+        float lepIso_                     [nlepsMax];
+        float lepPtRel_                   [nlepsMax];
+        short lepID_                      [nlepsMax];
+        bool  lepMatched_                 [nlepsMax];   // matched to GEN with DR=0.1
+        unsigned short lepMatchIndex_     [nlepsMax];   // index in the stored genLep[] collection
 
         unsigned short njets_;
-        float jetPt_            [njetsMax]; 
-        float jetEta_           [njetsMax]; 
-        float jetPhi_           [njetsMax]; 
-        float jetM_             [njetsMax]; 
-        float jetBTag_          [njetsMax];
+        float jetPt_                      [njetsMax]; 
+        float jetEta_                     [njetsMax]; 
+        float jetPhi_                     [njetsMax]; 
+        float jetM_                       [njetsMax]; 
+        float jetBTag_                    [njetsMax];
 
-        unsigned short nrjets_;
-        float rjetPt_           [nrjetsMax]; 
-        float rjetEta_          [nrjetsMax]; 
-        float rjetPhi_          [nrjetsMax]; 
-        float rjetM_            [nrjetsMax]; 
-        float rjetBTag_         [nrjetsMax];
+        unsigned short nrjets_;          
+        float rjetPt_                     [nrjetsMax]; 
+        float rjetEta_                    [nrjetsMax]; 
+        float rjetPhi_                    [nrjetsMax]; 
+        float rjetM_                      [nrjetsMax]; 
+        float rjetBTag_                   [nrjetsMax];
+
+        unsigned short ngenleps_;
+        float genlepPt_                   [ngenlepsMax]; 
+        float genlepEta_                  [ngenlepsMax]; 
+        float genlepPhi_                  [ngenlepsMax]; 
+        float genlepM_                    [ngenlepsMax];   
+        short genlepID_                   [ngenlepsMax];
 
         float met_;          // raw pf-met
         float metPhi_;
@@ -132,10 +152,21 @@ class SimpleROOT : public edm::EDAnalyzer {
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
 
+
         unsigned short nphos_;
 };
 
-SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
+SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig):  // initialize tokens in the constructor, better performance
+verticesToken(consumes<reco::VertexCollection>(iConfig.getUntrackedParameter("offlineSlimmedPrimaryVertices", edm::InputTag("offlineSlimmedPrimaryVertices")))),
+muonsToken(consumes<pat::MuonCollection>(iConfig.getUntrackedParameter("slimmedMuons",edm::InputTag("slimmedMuons")))),
+electronsToken(consumes<pat::ElectronCollection>(iConfig.getUntrackedParameter("slimmedElectrons",edm::InputTag("slimmedElectrons")))),
+jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJets",edm::InputTag("slimmedJets")))),
+metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
+photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slimmedPhotons",edm::InputTag("slimmedPhotons")))),
+rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
+pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
+prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles"))))
+//Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
@@ -160,8 +191,7 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("lepPtRel"         ,lepPtRel_               ,"lepPtRel[nleps]/F");
     events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
     events_->Branch("lepMatched"       ,lepMatched_             ,"lepMatched[nleps]/O");
-    events_->Branch("lepPrompt"        ,lepPrompt_              ,"lepPrompt[nleps]/O");
-    events_->Branch("lepIsHF"          ,lepHF_                  ,"lepIsHF[nleps]/O");
+    events_->Branch("lepMatchIndex"    ,lepMatchIndex_          ,"lepMatchIndex[nleps]/s");
 
     events_->Branch("njets"            ,&njets_                 ,"njets/s");
     events_->Branch("jetPt"            ,jetPt_                  ,"jetPt[njets]/F");
@@ -177,6 +207,12 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig)
     events_->Branch("rjetM"            ,rjetM_                  ,"rjetM[nrjets]/F");
     events_->Branch("rjetBTag"         ,rjetBTag_               ,"rjetBTag[nrjets]/F");
 
+    events_->Branch("ngenleps"         ,&ngenleps_              ,"ngenleps/s");
+    events_->Branch("genlepPt"         ,genlepPt_               ,"genlepPt[ngenleps]/F");
+    events_->Branch("genlepEta"        ,genlepEta_              ,"genlepEta[ngenleps]/F");
+    events_->Branch("genlepPhi"        ,genlepPhi_              ,"genlepPhi[ngenleps]/F");
+    events_->Branch("genlepM"          ,genlepM_                ,"genlepM[ngenleps]/F");
+    events_->Branch("genlepID"         ,genlepID_               ,"genlepID[ngenleps]/S");
 
     events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
     events_->Branch("met"              ,&met_                   ,"met/F");
@@ -204,19 +240,22 @@ SimpleROOT::~SimpleROOT() {}
 // ------------ method called for each event  ------------
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
-    iEvent.getByLabel("offlineSlimmedPrimaryVertices", vertices);  
-    iEvent.getByLabel("slimmedMuons", muons);
-    iEvent.getByLabel("slimmedElectrons", electrons);
-    iEvent.getByLabel("slimmedJets", jets);
-    iEvent.getByLabel("slimmedMETs", mets);
-    iEvent.getByLabel("slimmedPhotons", photons);
-    iEvent.getByLabel("fixedGridRhoFastjetAll",rhoH);
-    iEvent.getByLabel("addPileupInfo", pileup);
+    iEvent.getByToken(verticesToken, vertices);  
+    iEvent.getByToken(muonsToken, muons);
+    iEvent.getByToken(electronsToken, electrons);
+    iEvent.getByToken(jetsToken, jets);
+    iEvent.getByToken(metsToken, mets);
+    iEvent.getByToken(photonsToken, photons);
+    iEvent.getByToken(rhoHToken, rhoH);
+    iEvent.getByToken(pileupToken, pileup);
+    iEvent.getByToken(prunedToken, pruned);
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
     vector<const reco::Candidate *> myRJets; // in this container we will all rejected prompt jets (PV) -- due to DR matching with myLeptons
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
+
+    vector<const reco::Candidate *> myGenLeptons;
 
     // --- loop inside the objects
     for (const reco::Vertex &PV : *vertices)
@@ -248,6 +287,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if( isGoodPhoton(photon) ) myPhotons.push_back(&photon); 
     }
 
+    for (const reco::GenParticle & genParticle: *pruned)
+    {
+	int ID     = genParticle.pdgId();
+        float pt   = genParticle.pt() ;
+        float eta  = genParticle.eta();
+        int status = genParticle.status();
+        if(pt > 10 && fabs(eta) < 2.5 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); // 2.5 = 2.4 + 0.1, with 0.1 the matching to reco cone
+    }
+
     const pat::MET &met = mets->front();
     float rawmet      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
     float rawmetPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
@@ -260,6 +308,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     sortByPt(myJets);
     sortByPt(myRJets);
     sortByPt(myPhotons);
+    sortByPt(myGenLeptons);
 
     TLorentzVector l1,l2;
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
@@ -297,19 +346,17 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     eventNum_                = iEvent.id().event();
 
     nleps_                   = (unsigned short) myLeptons.size();
-    
     for(int ii = 0 ; ii < nlepsMax; ii++) 
     {
-       	lepPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()         : 0;
-	lepEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()        : 0;
-	lepPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()        : 0;
-	lepM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()       : 0;
-        lepID_      [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()      : 0;
-        lepIso_     [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii]) : 0;  
-        lepPtRel_   [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets): 1.e+5;  
-        lepMatched_ [ii]  = 0;  // TBI
-        lepPrompt_  [ii]  = 0;  // TBI
-        lepHF_      [ii]  = 0;  // TBI
+       	lepPt_          [ii]  = ii < nleps_ ? myLeptons[ii]->pt()         : 0;
+	lepEta_         [ii]  = ii < nleps_ ? myLeptons[ii]->eta()        : 0;
+	lepPhi_         [ii]  = ii < nleps_ ? myLeptons[ii]->phi()        : 0;
+	lepM_           [ii]  = ii < nleps_ ? myLeptons[ii]->mass()       : 0;
+        lepID_          [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()      : 0;
+        lepIso_         [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii]) : 0;  
+        lepPtRel_       [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets): 1.e+5;  
+        lepMatched_     [ii]  = 0;  // TBI
+        lepMatchIndex_  [ii]  = 0;  // TBI
     }
     
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
@@ -320,7 +367,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     l1l2Phi_                 = nleps_>=2 ? (l1+l2).Phi() : 0;
 
     njets_                   = (unsigned short) myJets.size();
-    for(int ii = 0 ; ii < nlepsMax; ii++) 
+    for(int ii = 0 ; ii < njetsMax; ii++) 
     {
        	jetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
 	jetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
@@ -330,13 +377,23 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     }
 
     nrjets_                   = (unsigned short) myJets.size();
-    for(int ii = 0 ; ii < nlepsMax; ii++) 
+    for(int ii = 0 ; ii < nrjetsMax; ii++) 
     {
        	rjetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
 	rjetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
 	rjetPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
 	rjetM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
         rjetBTag_    [ii]  = 0;  // TBI 
+    }
+
+    ngenleps_                   = (unsigned short) myGenLeptons.size();
+    for(int ii = 0 ; ii < ngenlepsMax; ii++) 
+    {
+       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()         : 0;
+	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()        : 0;
+	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()        : 0;
+	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()       : 0;
+        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()      : 0;
     }
 
     nphos_                   = (unsigned short) myPhotons.size();
