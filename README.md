@@ -49,7 +49,6 @@ events->Show(3)
 
 <pre>
 <samp>
-
 ======> EVENT:3
  goodVtx         = 1
  nVtx            = 23
@@ -71,15 +70,13 @@ events->Show(3)
                   2.26387
  lepM            = 0.13957, 
                   0.13957
- lepIso          = 0, 
+ lepIso          = 0.00903365, 
                   0
+ lepPtRel        = 119.693, 
+                  31.4781
  lepID           = 13, 
                   -13
- lepMatched      = 0, 
-                  0
- lepPrompt       = 0, 
-                  0
- lepIsHF         = 0, 
+ lepGenMatchIndex = 1, 
                   0
  njets           = 1
  jetPt           = 37.2818
@@ -93,6 +90,23 @@ events->Show(3)
  rjetPhi         = -0.0836522
  rjetM           = 0.13957
  rjetBTag        = 0
+ ngenleps        = 2
+ genlepPt        = 30.06, 
+                  36.8366
+ genlepEta       = -0.398317, 
+                  -2.19914
+ genlepPhi       = 2.26368, 
+                  -0.0839442
+ genlepM         = 0.105658, 
+                  0.105665
+ genlepID        = -13, 
+                  13
+ genl1l2M        = 91.8685
+ genl1l2Pt       = 26.6092
+ genl1l2Eta      = -2.58991
+ genl1l2Phi      = 0.852789
+ genl1l2DPhi     = 2.34762
+ genl1l2DR       = 2.95877
  nphos           = 0
  met             = 26.6696
  metPhi          = -1.89484
@@ -110,8 +124,8 @@ events->Show(3)
 
 <h4> Missing elements </h4>
 <ul>
-<li> GEN information and matching to RECO </li>
 <li> trigger bits </li>
+<li> event flags </li>
 </ul>
 
 <h4> Dogma </h4>

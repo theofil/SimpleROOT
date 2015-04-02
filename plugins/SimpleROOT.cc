@@ -62,6 +62,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float LeptonRelIso(const reco::Candidate *cand){return cand->isElectron() ? ElectronRelIso(cand) : MuonRelIso(cand);}
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
+        short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -114,8 +115,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float lepIso_                     [nlepsMax];
         float lepPtRel_                   [nlepsMax];
         short lepID_                      [nlepsMax];
-        bool  lepMatched_                 [nlepsMax];   // matched to GEN with DR=0.1
-        unsigned short lepMatchIndex_     [nlepsMax];   // index in the stored genLep[] collection
+        short lepGenMatchIndex_           [nlepsMax];   // index in the stored genLep[] collection
 
         unsigned short njets_;
         float jetPt_                      [njetsMax]; 
@@ -137,6 +137,13 @@ class SimpleROOT : public edm::EDAnalyzer {
         float genlepPhi_                  [ngenlepsMax]; 
         float genlepM_                    [ngenlepsMax];   
         short genlepID_                   [ngenlepsMax];
+
+        float genl1l2DPhi_;
+        float genl1l2DR_;
+        float genl1l2Pt_;
+        float genl1l2M_;
+        float genl1l2Eta_;
+        float genl1l2Phi_;
 
         float met_;          // raw pf-met
         float metPhi_;
@@ -190,8 +197,7 @@ prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParamete
     events_->Branch("lepIso"           ,lepIso_                 ,"lepIso[nleps]/F");
     events_->Branch("lepPtRel"         ,lepPtRel_               ,"lepPtRel[nleps]/F");
     events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
-    events_->Branch("lepMatched"       ,lepMatched_             ,"lepMatched[nleps]/O");
-    events_->Branch("lepMatchIndex"    ,lepMatchIndex_          ,"lepMatchIndex[nleps]/s");
+    events_->Branch("lepGenMatchIndex" ,lepGenMatchIndex_       ,"lepGenMatchIndex[nleps]/S");
 
     events_->Branch("njets"            ,&njets_                 ,"njets/s");
     events_->Branch("jetPt"            ,jetPt_                  ,"jetPt[njets]/F");
@@ -213,6 +219,13 @@ prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParamete
     events_->Branch("genlepPhi"        ,genlepPhi_              ,"genlepPhi[ngenleps]/F");
     events_->Branch("genlepM"          ,genlepM_                ,"genlepM[ngenleps]/F");
     events_->Branch("genlepID"         ,genlepID_               ,"genlepID[ngenleps]/S");
+
+    events_->Branch("genl1l2M"         ,&genl1l2M_              ,"genl1l2M/F");
+    events_->Branch("genl1l2Pt"        ,&genl1l2Pt_             ,"genl1l2Pt/F");
+    events_->Branch("genl1l2Eta"       ,&genl1l2Eta_            ,"genl1l2Eta/F");
+    events_->Branch("genl1l2Phi"       ,&genl1l2Phi_            ,"genl1l2Phi/F");
+    events_->Branch("genl1l2DPhi"      ,&genl1l2DPhi_           ,"genl1l2DPhi/F");
+    events_->Branch("genl1l2DR"        ,&genl1l2DR_             ,"genl1l2DR/F");
 
     events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
     events_->Branch("met"              ,&met_                   ,"met/F");
@@ -314,6 +327,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
     if(myLeptons.size() >=2) l2 = P4(myLeptons[1]);
 
+    TLorentzVector genl1,genl2;
+    if(myGenLeptons.size() >=1) genl1 = P4(myGenLeptons[0]);
+    if(myGenLeptons.size() >=2) genl2 = P4(myGenLeptons[1]);
+
     TLorentzVector metVector, t1metVector;
     metVector.SetPtEtaPhiE  (rawmet  , 0, rawmetPhi, rawmet );
     t1metVector.SetPtEtaPhiE(t1met   , 0, t1metPhi , t1met  );
@@ -348,15 +365,14 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
     {
-       	lepPt_          [ii]  = ii < nleps_ ? myLeptons[ii]->pt()         : 0;
-	lepEta_         [ii]  = ii < nleps_ ? myLeptons[ii]->eta()        : 0;
-	lepPhi_         [ii]  = ii < nleps_ ? myLeptons[ii]->phi()        : 0;
-	lepM_           [ii]  = ii < nleps_ ? myLeptons[ii]->mass()       : 0;
-        lepID_          [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()      : 0;
-        lepIso_         [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii]) : 0;  
-        lepPtRel_       [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets): 1.e+5;  
-        lepMatched_     [ii]  = 0;  // TBI
-        lepMatchIndex_  [ii]  = 0;  // TBI
+       	lepPt_             [ii]  = ii < nleps_ ? myLeptons[ii]->pt()                              : 0;
+	lepEta_            [ii]  = ii < nleps_ ? myLeptons[ii]->eta()                             : 0;
+	lepPhi_            [ii]  = ii < nleps_ ? myLeptons[ii]->phi()                             : 0;
+	lepM_              [ii]  = ii < nleps_ ? myLeptons[ii]->mass()                            : 0;
+        lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                           : 0;
+        lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                      : 0;  
+        lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                     : 1.e+5;  
+        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getLepGenMatchIndex(myLeptons[ii], myGenLeptons) : -1; //function returns -1 if not matched  
     }
     
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
@@ -395,6 +411,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()       : 0;
         genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()      : 0;
     }
+
+    genl1l2DPhi_             = ngenleps_>=2 ? genl1.DeltaPhi(genl2) : 0;
+    genl1l2DR_               = ngenleps_>=2 ? genl1.DeltaR(genl2) : 0;
+    genl1l2Pt_               = ngenleps_>=2 ? (genl1+genl2).Pt() : 0;
+    genl1l2M_                = ngenleps_>=2 ? (genl1+genl2).M() : 0;
+    genl1l2Eta_              = ngenleps_>=2 && genl1l2Pt_ > 1.e-3 ? (genl1+genl2).Eta() : 0;
+    genl1l2Phi_              = ngenleps_>=2 ? (genl1+genl2).Phi() : 0;
 
     nphos_                   = (unsigned short) myPhotons.size();
     
@@ -453,6 +476,22 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     if(!mu.isTightMuon(vtx)) res = false;
 
     return res;
+}
+
+short SimpleROOT::getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons)
+{
+    short myIndex = -1; // don't change this
+    
+    float DR = 1.e+9;
+
+    TLorentzVector myRecoLepP4 = P4(myRecoLep);
+    for(unsigned int genIndex = 0; genIndex < myGenLeptons.size(); ++genIndex)
+    {
+	TLorentzVector myGenLepP4 = P4(myGenLeptons[genIndex]);
+        float myDR = myGenLepP4.DeltaR(myRecoLepP4);
+	if(myDR < DR && myDR < 0.1) myIndex = genIndex;
+    }
+    return myIndex;
 }
 
 
