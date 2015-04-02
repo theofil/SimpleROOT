@@ -446,14 +446,14 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
-    bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
-    bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
+ //   bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
+ //   bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
     bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
 
     if(el.pt() < 10) res = false;
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
     if(isEBEEGap && res==true) res=false;
-
+/*
     if(res) 
     {
         // --- https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#PHYS14_selection_all_conditions  (v13)
@@ -498,6 +498,7 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
             if(res && passConversionVeto            == false   )res=false;
         }
     }
+*/
     return res;
 }
 
