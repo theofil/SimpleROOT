@@ -454,6 +454,8 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
     if(isEBEEGap && res==true) res=false;
 /*
+    Disabling temporary the e-ID selection; will investigate use pre computed value maps
+
     if(res) 
     {
         // --- https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#PHYS14_selection_all_conditions  (v13)
