@@ -2,7 +2,7 @@
 from CRABClient.UserUtilities import config
 config = config()
 
-config.General.requestName = 'ttbar4'
+config.General.requestName = 'ttbar_synch_v1'
 config.General.workArea = 'crab_projects'
 
 config.JobType.pluginName = 'Analysis'
@@ -12,11 +12,11 @@ config.Data.inputDataset = '/TTJets_MSDecaysCKM_central_Tune4C_13TeV-madgraph-ta
 #config.Data.inputDataset  = '/TTJets_MSDecaysCKM_central_Tune4C_13TeV-madgraph-tauola/Phys14DR-PU4bx50_PHYS14_25_V1-v1/MINIAODSIM'
 config.Data.inputDBS = 'global'
 config.Data.splitting = 'FileBased'
-config.Data.unitsPerJob = 5
+config.Data.unitsPerJob = 3
 #config.Data.totalUnits = 25
 config.Data.outLFN = '/store/user/theofil/test' # or '/store/group/<subdir>'
 config.Data.publication = False
-config.Data.publishDataName = 'DoNOTPublish'
+config.Data.publishDataName = ''
 
 config.Site.storageSite = 'T2_CH_CERN'
 
