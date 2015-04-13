@@ -60,6 +60,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float MuonRelIso(const reco::Candidate *cand);
         float ElectronRelIso(const reco::Candidate *cand);
         float LeptonRelIso(const reco::Candidate *cand){return cand->isElectron() ? ElectronRelIso(cand) : MuonRelIso(cand);}
+        bool  isGoodLepton(const reco::Candidate *cand){return cand->isElectron() ? isGoodElectron(*((pat::Electron*)cand)) : isGoodMuon(*((pat::Muon*)cand));}
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
         short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
@@ -154,6 +155,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 
         float rho_;
         float nPU_;
+        float nPUTrue_;
 
         float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -met - l1l2] 
         float t1vHT_;         // as vHT but with t1 correction
@@ -237,6 +239,7 @@ prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParamete
 
     events_->Branch("rho"              ,&rho_                   ,"rho/F");
     events_->Branch("nPU"              ,&nPU_                   ,"nPU/F");
+    events_->Branch("nPUTrue"          ,&nPUTrue_               ,"nPUTrue/F");
 
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
@@ -306,7 +309,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         float pt   = genParticle.pt() ;
         float eta  = genParticle.eta();
         int status = genParticle.status();
-        if(pt > 10 && fabs(eta) < 2.5 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); // 2.5 = 2.4 + 0.1, with 0.1 the matching to reco cone
+        if(pt > 10 && fabs(eta) < 2.4 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); 
     }
 
     const pat::MET &met = mets->front();
@@ -345,12 +348,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
  
     // --- get pileup info 
     float nPU = 0;
+    float nPUTrue = 0;
     for( auto & pu : *pileup)
     { 
 	if(pu.getBunchCrossing() == 0) 
 	{
-	    nPU     =  pu.getPU_NumInteractions();
-            //nPUTrue_ =  pu.getTrueNumInteractions(); 
+	    nPU      =  pu.getPU_NumInteractions();
+            nPUTrue_ =  pu.getTrueNumInteractions(); 
 	}
     }
 
@@ -435,6 +439,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     rho_                     = (float) (*rhoH);
 
     nPU_                     = nPU; 
+    nPUTrue_                 = nPUTrue; 
 
     events_->Fill();
 }
@@ -542,15 +547,13 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
 
- //   bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
- //   bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
+    bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
+    bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
     bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
 
     if(el.pt() < 10) res = false;
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
     if(isEBEEGap && res==true) res=false;
-/*
-    Disabling temporary the e-ID selection; will investigate use pre computed value maps
 
     if(res) 
     {
@@ -596,7 +599,7 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
             if(res && passConversionVeto            == false   )res=false;
         }
     }
-*/
+
     return res;
 }
 
