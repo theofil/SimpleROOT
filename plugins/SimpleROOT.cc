@@ -354,7 +354,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if(pu.getBunchCrossing() == 0) 
 	{
 	    nPU      =  pu.getPU_NumInteractions();
-            nPUTrue_ =  pu.getTrueNumInteractions(); 
+            nPUTrue  =  pu.getTrueNumInteractions(); 
 	}
     }
 
@@ -546,15 +546,14 @@ float SimpleROOT::ElectronRelIso(const reco::Candidate *cand)
 bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 {
     bool res = true; // by default is good, unless fails a cut bellow
-
-    bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
-    bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
     bool isEBEEGap = fabs(el.superCluster()->eta()) > 1.4442 && fabs(el.superCluster()->eta()) < 1.5660 ? 1 : 0;
 
     if(el.pt() < 10) res = false;
     if(fabs(el.eta()) > 2.4 && res == true) res = false;
     if(isEBEEGap && res==true) res=false;
 
+    bool isEB      = fabs(el.superCluster()->eta()) < 1.4442 ? 1 : 0; 
+    bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
     if(res) 
     {
         // --- https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#PHYS14_selection_all_conditions  (v13)
@@ -568,8 +567,8 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
         float  dPhiIn                           = (float)el.deltaPhiSuperClusterTrackAtVtx();
         float  HoE                              = (float)el.hadronicOverEm();
         float  ooEmooP                          = (float)fabs(1/ecalEnergy - 1/trackMomentumAtVtx);
-        float  d0                               = (float)el.gsfTrack()->dxy();
-        float  dz                               = (float)el.gsfTrack()->dz();
+        float  d0                               = (float)el.gsfTrack()->dxy(vtx.position());
+        float  dz                               = (float)el.gsfTrack()->dz(vtx.position());
         int    expectedMissingInnerHits         = el.gsfTrack()->hitPattern().numberOfHits(reco::HitPattern::MISSING_INNER_HITS);
         bool   passConversionVeto               = el.passConversionVeto(); 
     
@@ -580,8 +579,8 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
             if(res && fabs(dPhiIn)                  >  0.072624)res=false;                   
             if(res && HoE                           >  0.121476)res=false; 
             if(res && ooEmooP                       >  0.221803)res=false; 
-            if(res && d0                            >  0.022664)res=false; 
-            if(res && dz                            >  0.173670)res=false; 
+            if(res && fabs(d0)                      >  0.022664)res=false; 
+            if(res && fabs(dz)                      >  0.173670)res=false; 
             if(res && expectedMissingInnerHits      >= 2       )res=false;
             if(res && passConversionVeto            == false   )res=false;
 	}
@@ -593,13 +592,12 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
             if(res && fabs(dPhiIn)                  >  0.145129)res=false;                   
             if(res && HoE                           >  0.131862)res=false; 
             if(res && ooEmooP                       >  0.142283)res=false; 
-            if(res && d0                            >  0.097358)res=false; 
-            if(res && dz                            >  0.198444)res=false; 
+            if(res && fabs(d0)                      >  0.097358)res=false; 
+            if(res && fabs(dz)                      >  0.198444)res=false; 
             if(res && expectedMissingInnerHits      >= 2       )res=false;
             if(res && passConversionVeto            == false   )res=false;
         }
     }
-
     return res;
 }
 
