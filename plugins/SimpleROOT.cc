@@ -280,11 +280,11 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     for (const pat::Muon &mu : *muons) 
     {
-	if( isGoodMuon(mu) )myLeptons.push_back(&mu);
+	if( isGoodMuon(mu) && LeptonRelIso((reco::Candidate*)&mu) < 0.15 )myLeptons.push_back(&mu);
     }
     for (const pat::Electron &el : *electrons)
     {
-         if( isGoodElectron(el) ) myLeptons.push_back(&el);
+         if( isGoodElectron(el) && LeptonRelIso((reco::Candidate*)&el) < 0.15  ) myLeptons.push_back(&el);
     }
 
     for(const pat::Jet &myjet : *jets)
