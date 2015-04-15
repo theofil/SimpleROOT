@@ -55,7 +55,6 @@ class SimpleROOT : public edm::EDAnalyzer {
         virtual bool isGoodVertex(const reco::Vertex &PV);
         virtual bool isGoodJet(const pat::Jet &myJet);
         virtual bool isGoodPhoton(const pat::Photon &myPhoton);
-        virtual void sortByPt(vector<const reco::Candidate *> myRecoCand);
 
         float MuonRelIso(const reco::Candidate *cand);
         float ElectronRelIso(const reco::Candidate *cand);
@@ -320,11 +319,14 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     float t1metPhi    = met.phi();
     float t1metSumEt  = met.sumEt();
 
-    sortByPt(myLeptons);
-    sortByPt(myJets);
-    sortByPt(myRJets);
-    sortByPt(myPhotons);
-    sortByPt(myGenLeptons);
+    //  --- sort by pt all objects, the [] is a C++11 lambda func 
+    std::sort(myLeptons.begin(), myLeptons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+    std::sort(myJets.begin(), myJets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+    std::sort(myRJets.begin(), myRJets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+    std::sort(myPhotons.begin(), myPhotons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+    std::sort(myGenLeptons.begin(), myGenLeptons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+
+    // --- define dilepton pair
 
     TLorentzVector l1,l2;
     if(myLeptons.size() >=1) l1 = P4(myLeptons[0]);
@@ -444,11 +446,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     events_->Fill();
 }
 
-void SimpleROOT::sortByPt(vector<const reco::Candidate *> myRecoCand)
-{
-    //  --- sort by pt all objects, the [] is a C++11 lambda func 
-    std::sort(myRecoCand.begin(), myRecoCand.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
-}
 
 bool SimpleROOT::isGoodPhoton(const pat::Photon &photon)
 {
