@@ -63,6 +63,9 @@ class SimpleROOT : public edm::EDAnalyzer {
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
         short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
+       
+        // miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
+        float getPFIsolation(edm::Handle<pat::PackedCandidateCollection>, const reco::Candidate*, float, float, float, bool, bool);
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -75,6 +78,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<double> rhoH;
         edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
         edm::Handle<edm::View<reco::GenParticle>> pruned;
+        edm::Handle<pat::PackedCandidateCollection> pfcands;
 
         
     	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
@@ -86,6 +90,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<double> rhoHToken;
         edm::EDGetTokenT<edm::View<PileupSummaryInfo>> pileupToken;
         edm::EDGetTokenT<edm::View<reco::GenParticle>> prunedToken;
+        edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -173,7 +178,8 @@ metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMET
 photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slimmedPhotons",edm::InputTag("slimmedPhotons")))),
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
-prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles"))))
+prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles")))),
+pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
     events_ = fileService_->make<TTree>("events","events");
@@ -264,6 +270,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(rhoHToken, rhoH);
     iEvent.getByToken(pileupToken, pileup);
     iEvent.getByToken(prunedToken, pruned);
+    iEvent.getByToken(pfcandsToken, pfcands);
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
@@ -280,11 +287,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     for (const pat::Muon &mu : *muons) 
     {
-	if( isGoodMuon(mu) && LeptonRelIso((reco::Candidate*)&mu) < 0.15 )myLeptons.push_back(&mu);
+//	if( isGoodMuon(mu) && LeptonRelIso((reco::Candidate*)&mu) < 0.15 )myLeptons.push_back(&mu); 
+        float miniISO = getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&mu), 0.05, 0.2, 10., false, false);
+	if( isGoodMuon(mu) && miniISO < 0.15 )myLeptons.push_back(&mu);
     }
     for (const pat::Electron &el : *electrons)
     {
-         if( isGoodElectron(el) && LeptonRelIso((reco::Candidate*)&el) < 0.15  ) myLeptons.push_back(&el);
+//         if( isGoodElectron(el) && LeptonRelIso((reco::Candidate*)&el) < 0.15  ) myLeptons.push_back(&el);
+        float miniISO = getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&el), 0.05, 0.2, 10., false, false);
+	if( isGoodElectron(el) && miniISO < 0.15 )myLeptons.push_back(&el);
     }
 
     for(const pat::Jet &myjet : *jets)
@@ -617,6 +628,88 @@ bool SimpleROOT::isGoodVertex(const reco::Vertex &vtx)
   // The "good vertex" selection is borrowed Ilya Kravchenko who borrowed from Giovanni Zevi Della Porta
   return ( !(vtx.chi2()==0 && vtx.ndof()==0) && vtx.ndof()>=4. && vtx.position().Rho()<=2.0 && fabs(vtx.position().Z())<=24.0 ) ? true : false; 
 }
+
+float SimpleROOT::getPFIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,
+                        const reco::Candidate* ptcl,  
+                        float r_iso_min, float r_iso_max, float kt_scale,
+                        bool use_pfweight, bool charged_only) {
+
+    if (ptcl->pt()<5.) return 99999.;
+
+    float deadcone_nh(0.), deadcone_ch(0.), deadcone_ph(0.), deadcone_pu(0.);
+    if(ptcl->isElectron()) {
+      if (fabs(ptcl->eta())>1.479) {deadcone_ch = 0.015; deadcone_pu = 0.015; deadcone_ph = 0.08;}
+    } else if(ptcl->isMuon()) {
+      deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01;  
+    } else {
+      //deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01; // maybe use muon cones??
+    }
+
+    float iso_nh(0.); float iso_ch(0.); 
+    float iso_ph(0.); float iso_pu(0.);
+    float ptThresh(0.5);
+    if(ptcl->isElectron()) ptThresh = 0;
+    float r_iso = max(r_iso_min,min(r_iso_max, kt_scale/ptcl->pt()));
+    for (const pat::PackedCandidate &pfc : *pfcands) {
+      if (abs(pfc.pdgId())<7) continue;
+
+      float dr = deltaR(pfc, *ptcl);
+      if (dr > r_iso) continue;
+      
+      //////////////////  NEUTRALS  /////////////////////////
+      if (pfc.charge()==0){
+        if (pfc.pt()>ptThresh) {
+          float wpf(1.);
+          if (use_pfweight){
+            float wpv(0.), wpu(0.);
+            for (const pat::PackedCandidate &jpfc : *pfcands) {
+              float jdr = deltaR(pfc, jpfc);
+              if (pfc.charge()!=0 || jdr<0.00001) continue;
+              float jpt = jpfc.pt();
+              if (pfc.fromPV()>1) wpv *= jpt/jdr;
+              else wpu *= jpt/jdr;
+            }
+            wpv = log(wpv);
+            wpu = log(wpu);
+            wpf = wpv/(wpv+wpu);
+          }
+          /////////// PHOTONS ////////////
+          if (abs(pfc.pdgId())==22) {
+            if(dr < deadcone_ph) continue;
+            iso_ph += wpf*pfc.pt();
+	    /////////// NEUTRAL HADRONS ////////////
+          } else if (abs(pfc.pdgId())==130) {
+            if(dr < deadcone_nh) continue;
+            iso_nh += wpf*pfc.pt();
+          }
+        }
+        //////////////////  CHARGED from PV  /////////////////////////
+      } else if (pfc.fromPV()>1){
+        if (abs(pfc.pdgId())==211) {
+          if(dr < deadcone_ch) continue;
+          iso_ch += pfc.pt();
+        }
+        //////////////////  CHARGED from PU  /////////////////////////
+      } else {
+        if (pfc.pt()>ptThresh){
+          if(dr < deadcone_pu) continue;
+          iso_pu += pfc.pt();
+        }
+      }
+    }
+    float iso(0.);
+    if (charged_only){
+      iso = iso_ch;
+    } else {
+      iso = iso_ph + iso_nh;
+      if (!use_pfweight) iso -= 0.5*iso_pu;
+      if (iso>0) iso += iso_ch;
+      else iso = iso_ch;
+    }
+    iso = iso/ptcl->pt();
+
+    return iso;
+  }
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
