@@ -2,7 +2,7 @@
 from CRABClient.UserUtilities import config
 config = config()
 
-config.General.requestName = 'crab_ttbar_synch_v5_noISO'
+config.General.requestName = 'ttbar_synch_v4_withISO'
 config.General.workArea = 'crab_projects'
 
 config.JobType.pluginName = 'Analysis'
