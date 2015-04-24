@@ -28,6 +28,13 @@
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
 
+#include "DataFormats/Math/interface/deltaR.h"
+#include "FWCore/Common/interface/TriggerNames.h"
+#include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
+#include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+
+
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "TTree.h"
@@ -79,6 +86,9 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
         edm::Handle<edm::View<reco::GenParticle>> pruned;
         edm::Handle<pat::PackedCandidateCollection> pfcands;
+        edm::Handle<edm::TriggerResults> triggerBits;
+        edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
+        edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
 
         
     	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
@@ -91,6 +101,10 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<edm::View<PileupSummaryInfo>> pileupToken;
         edm::EDGetTokenT<edm::View<reco::GenParticle>> prunedToken;
         edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken;
+
+        edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
+        edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
+        edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescales_;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -179,7 +193,10 @@ photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slim
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
 prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles")))),
-pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
+triggerBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HLT"))),
+triggerObjects_(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
+triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger")))
+//pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
     events_ = fileService_->make<TTree>("events","events");
@@ -270,7 +287,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(rhoHToken, rhoH);
     iEvent.getByToken(pileupToken, pileup);
     iEvent.getByToken(prunedToken, pruned);
-    iEvent.getByToken(pfcandsToken, pfcands);
+//    iEvent.getByToken(pfcandsToken, pfcands);
+    iEvent.getByToken(triggerBits_, triggerBits);
+    iEvent.getByToken(triggerObjects_, triggerObjects);
+    iEvent.getByToken(triggerPrescales_, triggerPrescales);
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
@@ -278,6 +298,18 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
 
     vector<const reco::Candidate *> myGenLeptons;
+
+    // --- trigger info
+    const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
+    std::cout << "\n === TRIGGER PATHS === " << std::endl;
+    for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) {
+        std::cout << "Trigger " << names.triggerName(i) << 
+                ", prescale " << triggerPrescales->getPrescaleForIndex(i) <<
+                ": " << (triggerBits->accept(i) ? "PASS" : "fail (or not run)") 
+                << std::endl;
+    }
+
+
 
     // --- loop inside the objects
     for (const reco::Vertex &PV : *vertices)
