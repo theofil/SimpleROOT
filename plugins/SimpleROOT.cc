@@ -287,15 +287,11 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     for (const pat::Muon &mu : *muons) 
     {
-//	if( isGoodMuon(mu) && LeptonRelIso((reco::Candidate*)&mu) < 0.15 )myLeptons.push_back(&mu); 
-        float miniISO = getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&mu), 0.05, 0.2, 10., false, false);
-	if( isGoodMuon(mu) && miniISO < 0.15 )myLeptons.push_back(&mu);
+	if(isGoodMuon(mu)) myLeptons.push_back(&mu);
     }
     for (const pat::Electron &el : *electrons)
     {
-//         if( isGoodElectron(el) && LeptonRelIso((reco::Candidate*)&el) < 0.15  ) myLeptons.push_back(&el);
-        float miniISO = getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&el), 0.05, 0.2, 10., false, false);
-	if( isGoodElectron(el) && miniISO < 0.15 )myLeptons.push_back(&el);
+	if(isGoodElectron(el)) myLeptons.push_back(&el);
     }
 
     for(const pat::Jet &myjet : *jets)
@@ -487,6 +483,10 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     if(mu.pt() < 10) res = false; 
     if(fabs(mu.eta()) > 2.4) res = false;
     if(!mu.isTightMuon(vtx)) res = false;
+   
+    // --- isolation --- those not used are commented out
+    if(res && LeptonRelIso((reco::Candidate*)&mu) > 0.15) res = false;
+//    if(getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&mu), 0.05, 0.2, 10., false, false) > 0.15) res = false; // miniISO
 
     return res;
 }
@@ -606,6 +606,12 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
             if(res && passConversionVeto            == false   )res=false;
         }
     }
+
+
+    // --- isolation -- those not used are commented out
+    if(res && LeptonRelIso((reco::Candidate*)&el) > 0.15)res = false;
+//    if(res && getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&el), 0.05, 0.2, 10., false, false) > 0.15)res = false;  //miniISO
+
     return res;
 }
 
