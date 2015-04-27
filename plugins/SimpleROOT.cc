@@ -70,6 +70,7 @@ class SimpleROOT : public edm::EDAnalyzer {
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
         short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
+        bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
        
         // miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
         float getPFIsolation(edm::Handle<pat::PackedCandidateCollection>, const reco::Candidate*, float, float, float, bool, bool);
@@ -87,6 +88,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<edm::View<reco::GenParticle>> pruned;
         edm::Handle<pat::PackedCandidateCollection> pfcands;
         edm::Handle<edm::TriggerResults> triggerBits;
+        edm::Handle<edm::TriggerResults> filterBits;
         edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
         edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
 
@@ -103,6 +105,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken;
 
         edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
+        edm::EDGetTokenT<edm::TriggerResults> filterBits_;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
         edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescales_;
 
@@ -135,6 +138,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float lepPtRel_                   [nlepsMax];
         short lepID_                      [nlepsMax];
         short lepGenMatchIndex_           [nlepsMax];   // index in the stored genLep[] collection
+        bool  lepTriggerMatch_            [nlepsMax];
 
         unsigned short njets_;
         float jetPt_                      [njetsMax]; 
@@ -179,6 +183,27 @@ class SimpleROOT : public edm::EDAnalyzer {
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
 
+	bool HLT_e1e2_; 
+	bool HLT_mu1mu2_; 
+	bool HLT_mu1e2_; 
+	bool HLT_e1mu2_; 
+	bool HLT_pfmet_; 
+	bool HLT_pfmetCSV_; 
+       
+	bool Flag_trackingFailureFilter_;		        
+	bool Flag_goodVertices_;			 
+	bool Flag_CSCTightHaloFilter_;		 
+	bool Flag_trkPOGFilters_;			 
+	bool Flag_trkPOG_logErrorTooManyClusters_;	 
+	bool Flag_EcalDeadCellTriggerPrimitiveFilter_; 
+	bool Flag_ecalLaserCorrFilter_;		 
+	bool Flag_trkPOG_manystripclus53X_;		 
+	bool Flag_eeBadScFilter_;			 
+	bool Flag_METFilters_;			 
+	bool Flag_HBHENoiseFilter_;			 
+	bool Flag_trkPOG_toomanystripclus53X_;	 
+	bool Flag_hcalLaserEventFilter_;		 
+
 
         unsigned short nphos_;
 };
@@ -194,6 +219,7 @@ rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
 prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles")))),
 triggerBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HLT"))),
+filterBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","PAT"))),
 triggerObjects_(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
 triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger")))
 //pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
@@ -222,6 +248,7 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("lepPtRel"         ,lepPtRel_               ,"lepPtRel[nleps]/F");
     events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
     events_->Branch("lepGenMatchIndex" ,lepGenMatchIndex_       ,"lepGenMatchIndex[nleps]/S");
+    events_->Branch("lepTriggerMatch"  ,lepTriggerMatch_        ,"lepTriggerMatch[nleps]/O");
 
     events_->Branch("njets"            ,&njets_                 ,"njets/s");
     events_->Branch("jetPt"            ,jetPt_                  ,"jetPt[njets]/F");
@@ -267,7 +294,26 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
 
+    events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/O");
+    events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/O");
+    events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/O");
+    events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/O");
+    events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/O");
+    events_->Branch("HLT_pfmetCSV"     ,&HLT_pfmetCSV_          ,"HLT_pfmetCSV/O");
 
+    events_->Branch("Flag_trackingFailureFilter"                   ,&Flag_trackingFailureFilter_	                ,"Flag_trackingFailureFilter/O");
+    events_->Branch("Flag_goodVertices"                            ,&Flag_goodVertices_			                ,"Flag_goodVertices/O");
+    events_->Branch("Flag_CSCTightHaloFilter"                      ,&Flag_CSCTightHaloFilter_		                ,"Flag_CSCTightHaloFilter/O");
+    events_->Branch("Flag_trkPOGFilters"                           ,&Flag_trkPOGFilters_		                ,"Flag_trkPOGFilters/O");
+    events_->Branch("Flag_trkPOG_logErrorTooManyClusters"          ,&Flag_trkPOG_logErrorTooManyClusters_	        ,"Flag_trkPOG_logErrorTooManyClusters/O");
+    events_->Branch("Flag_EcalDeadCellTriggerPrimitiveFilter"      ,&Flag_EcalDeadCellTriggerPrimitiveFilter_           ,"Flag_EcalDeadCellTriggerPrimitiveFilter/O");
+    events_->Branch("Flag_ecalLaserCorrFilter"                     ,&Flag_ecalLaserCorrFilter_		                ,"Flag_ecalLaserCorrFilter/O");
+    events_->Branch("Flag_trkPOG_manystripclus53X"                 ,&Flag_trkPOG_manystripclus53X_		        ,"Flag_trkPOG_manystripclus53X/O");
+    events_->Branch("Flag_eeBadScFilter"                           ,&Flag_eeBadScFilter_		                ,"Flag_eeBadScFilter/O");
+    events_->Branch("Flag_METFilters"                              ,&Flag_METFilters_			                ,"Flag_METFilters/O");
+    events_->Branch("Flag_HBHENoiseFilter"                         ,&Flag_HBHENoiseFilter_			        ,"Flag_HBHENoiseFilter/O");
+    events_->Branch("Flag_trkPOG_toomanystripclus53X"              ,&Flag_trkPOG_toomanystripclus53X_	                ,"Flag_trkPOG_toomanystripclus53X/O");
+    events_->Branch("Flag_hcalLaserEventFilter"                    ,&Flag_hcalLaserEventFilter_		                ,"Flag_hcalLaserEventFilter/O");
 
     //events_->Branch(""          ,&               ,"");
 }
@@ -289,6 +335,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(prunedToken, pruned);
 //    iEvent.getByToken(pfcandsToken, pfcands);
     iEvent.getByToken(triggerBits_, triggerBits);
+    iEvent.getByToken(filterBits_, filterBits);
     iEvent.getByToken(triggerObjects_, triggerObjects);
     iEvent.getByToken(triggerPrescales_, triggerPrescales);
 
@@ -299,16 +346,51 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     vector<const reco::Candidate *> myGenLeptons;
 
+    vector<TLorentzVector> hltEgammaCandidates;
+    vector<TLorentzVector >hltL3MuonCandidates;
+
     // --- trigger info
+    bool HLT_e1e2(false);
+    bool HLT_mu1mu2(false);
+    bool HLT_mu1e2(false);
+    bool HLT_e1mu2(false);
+    bool HLT_pfmet(false);
+    bool HLT_pfmetCSV(false);
+
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
-    std::cout << "\n === TRIGGER PATHS === " << std::endl;
-    for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) {
-        std::cout << "Trigger " << names.triggerName(i) << 
-                ", prescale " << triggerPrescales->getPrescaleForIndex(i) <<
-                ": " << (triggerBits->accept(i) ? "PASS" : "fail (or not run)") 
-                << std::endl;
+    for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) 
+    {
+	string trigger_name = string(names.triggerName(i));
+        trigger_name.pop_back();
+
+        if(trigger_name == string("HLT_Ele23_Ele12_CaloId_TrackId_Iso_v")                       && triggerBits->accept(i)) HLT_e1e2     = true; 
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v")                         && triggerBits->accept(i)) HLT_mu1mu2   = true;         
+        if(trigger_name == string("HLT_Mu23_TrkIsoVVL_Ele12_Gsf_CaloId_TrackId_Iso_MediumWP_v") && triggerBits->accept(i)) HLT_mu1e2    = true;         
+        if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele23_Gsf_CaloId_TrackId_Iso_MediumWP_v")  && triggerBits->accept(i)) HLT_e1mu2    = true; 
+        if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                                && triggerBits->accept(i)) HLT_pfmet    = true; 
+        if(trigger_name == string("HLT_PFMET120_NoiseCleaned_BTagCSV07_v")                      && triggerBits->accept(i)) HLT_pfmetCSV = true; 
     }
 
+
+   // --- store HLT trigger objects for offline matching
+   if(HLT_e1e2 || HLT_mu1mu2 || HLT_mu1e2 || HLT_e1mu2)
+   {
+	for (pat::TriggerObjectStandAlone obj : *triggerObjects) 
+	{
+	    obj.unpackPathNames(names);
+            if(obj.collection() == "hltL3MuonCandidates::HLT" || obj.collection() == "hltEgammaCandidates::HLT")
+            {
+		float pt  = obj.pt(); 
+                float eta = obj.eta(); 
+                float phi = obj.phi();
+                TLorentzVector myObj; 
+                myObj.SetPtEtaPhiM(pt, eta, phi, 0);
+ 
+	        if(obj.collection() == "hltL3MuonCandidates::HLT") hltL3MuonCandidates.push_back(myObj);
+	        if(obj.collection() == "hltEgammaCandidates::HLT") hltEgammaCandidates.push_back(myObj);
+	    }
+	}
+    }
 
 
     // --- loop inside the objects
@@ -410,14 +492,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
     {
-       	lepPt_             [ii]  = ii < nleps_ ? myLeptons[ii]->pt()                              : 0;
-	lepEta_            [ii]  = ii < nleps_ ? myLeptons[ii]->eta()                             : 0;
-	lepPhi_            [ii]  = ii < nleps_ ? myLeptons[ii]->phi()                             : 0;
-	lepM_              [ii]  = ii < nleps_ ? myLeptons[ii]->mass()                            : 0;
-        lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                           : 0;
-        lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                      : 0;  
-        lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                     : 1.e+5;  
-        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getLepGenMatchIndex(myLeptons[ii], myGenLeptons) : -1; //function returns -1 if not matched  
+       	lepPt_             [ii]  = ii < nleps_ ? myLeptons[ii]->pt()                                                   : 0;
+	lepEta_            [ii]  = ii < nleps_ ? myLeptons[ii]->eta()                                                  : 0;
+	lepPhi_            [ii]  = ii < nleps_ ? myLeptons[ii]->phi()                                                  : 0;
+	lepM_              [ii]  = ii < nleps_ ? myLeptons[ii]->mass()                                                 : 0;
+        lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                                                : 0;
+        lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0;  
+        lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                                          : 1.e+5;  
+        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getLepGenMatchIndex(myLeptons[ii], myGenLeptons)                      : -1; //function returns -1 if not matched  
+        lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
     
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
@@ -482,6 +565,37 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     nPU_                     = nPU; 
     nPUTrue_                 = nPUTrue; 
 
+    HLT_e1e2_                = HLT_e1e2;
+    HLT_mu1mu2_              = HLT_mu1mu2;
+    HLT_mu1e2_               = HLT_mu1e2;
+    HLT_e1mu2_               = HLT_e1mu2;
+    HLT_pfmet_               = HLT_pfmet;
+    HLT_pfmetCSV_            = HLT_pfmetCSV;
+
+    // --- filter bits
+    // code below was "borrowed" from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
+    const edm::TriggerNames &fnames = iEvent.triggerNames(*filterBits);
+    for (unsigned int i = 0, n = filterBits->size(); i < n; ++i) 
+    {
+      bool filterdecision(true);
+      filterdecision = filterBits->accept(i);
+      string filterName = fnames.triggerName(i);
+      if(filterName=="Flag_trackingFailureFilter")                  Flag_trackingFailureFilter_ = filterdecision; 
+      if(filterName=="Flag_goodVertices")			    Flag_goodVertices_ = filterdecision;       
+      if(filterName=="Flag_CSCTightHaloFilter")                     Flag_CSCTightHaloFilter_ = filterdecision;                                                         		 
+      if(filterName=="Flag_trkPOGFilters")                          Flag_trkPOGFilters_ = filterdecision;                                     			 
+      if(filterName=="Flag_trkPOG_logErrorTooManyClusters")         Flag_trkPOG_logErrorTooManyClusters_ = filterdecision;	 
+      if(filterName=="Flag_EcalDeadCellTriggerPrimitiveFilter")     Flag_EcalDeadCellTriggerPrimitiveFilter_ = filterdecision;
+      if(filterName=="Flag_ecalLaserCorrFilter")                    Flag_ecalLaserCorrFilter_ = filterdecision;                                      		 
+      if(filterName=="Flag_trkPOG_manystripclus53X")                Flag_trkPOG_manystripclus53X_ = filterdecision;                                    		 
+      if(filterName=="Flag_eeBadScFilter")                          Flag_eeBadScFilter_ = filterdecision;                       			 
+      if(filterName=="Flag_METFilters")                             Flag_METFilters_ = filterdecision;                    			
+      if(filterName=="Flag_HBHENoiseFilter")                        Flag_HBHENoiseFilter_ = filterdecision;                 			 
+      if(filterName=="Flag_trkPOG_toomanystripclus53X")             Flag_trkPOG_toomanystripclus53X_ = filterdecision;                        	 
+      if(filterName=="Flag_hcalLaserEventFilter")	            Flag_hcalLaserEventFilter_ = filterdecision;                           	 
+    }
+
+
     events_->Fill();
 }
 
@@ -519,6 +633,32 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     // --- isolation --- those not used are commented out
     if(res && LeptonRelIso((reco::Candidate*)&mu) > 0.15) res = false;
 //    if(getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&mu), 0.05, 0.2, 10., false, false) > 0.15) res = false; // miniISO
+
+    return res;
+}
+
+bool SimpleROOT::triggerMatch(const reco::Candidate *myRecoLep, const std::vector<TLorentzVector> & egamma, const std::vector<TLorentzVector> & l3muon)
+{
+    bool res  = false;
+    bool isEl = false;
+    bool isMu = false;
+    if(abs(myRecoLep->pdgId()) == 11)isEl = true;
+    if(abs(myRecoLep->pdgId()) == 13)isMu = true;
+   
+    if(isEl)
+    for(auto & triggerObj: egamma)
+    {
+	float DR = triggerObj.DeltaR(P4(myRecoLep));
+        if(DR < 0.2) res = true;
+    }
+
+    if(isMu)
+    for(auto & triggerObj: l3muon)
+    {
+	float DR = triggerObj.DeltaR(P4(myRecoLep));
+        if(DR < 0.2) res = true;
+    }
+
 
     return res;
 }
