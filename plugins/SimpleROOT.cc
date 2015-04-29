@@ -71,9 +71,9 @@ class SimpleROOT : public edm::EDAnalyzer {
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
         short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
         bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
+        const reco::Candidate *getGenMother(const reco::Candidate*); 
        
-        // miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
-        float getPFIsolation(edm::Handle<pat::PackedCandidateCollection>, const reco::Candidate*, float, float, float, bool, bool);
+        float getPFIsolation(edm::Handle<pat::PackedCandidateCollection>, const reco::Candidate*, float, float, float, bool, bool); // miniISO 
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -86,6 +86,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<double> rhoH;
         edm::Handle<edm::View<PileupSummaryInfo>>  pileup;
         edm::Handle<edm::View<reco::GenParticle>> pruned;
+        edm::Handle<edm::View<pat::PackedGenParticle>> packed;
         edm::Handle<pat::PackedCandidateCollection> pfcands;
         edm::Handle<edm::TriggerResults> triggerBits;
         edm::Handle<edm::TriggerResults> filterBits;
@@ -102,8 +103,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<double> rhoHToken;
         edm::EDGetTokenT<edm::View<PileupSummaryInfo>> pileupToken;
         edm::EDGetTokenT<edm::View<reco::GenParticle>> prunedToken;
+        edm::EDGetTokenT<edm::View<pat::PackedGenParticle>> packedToken;
         edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken;
-
         edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
         edm::EDGetTokenT<edm::TriggerResults> filterBits_;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
@@ -160,6 +161,9 @@ class SimpleROOT : public edm::EDAnalyzer {
         float genlepPhi_                  [ngenlepsMax]; 
         float genlepM_                    [ngenlepsMax];   
         short genlepID_                   [ngenlepsMax];
+        short genlepMID_                  [ngenlepsMax]; // mother 
+        short genlepGMID_                 [ngenlepsMax]; // grand mother
+        short genlepGGMID_                [ngenlepsMax]; // grand grand mother
 
         float genl1l2DPhi_;
         float genl1l2DR_;
@@ -172,6 +176,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float metPhi_;
         float t1met_;
         float t1metPhi_;
+        float genmet_;          
         float sumEt_;
         float t1sumEt_;
 
@@ -204,6 +209,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 	bool Flag_trkPOG_toomanystripclus53X_;	 
 	bool Flag_hcalLaserEventFilter_;		 
 
+	bool isDYTauTau_; 
 
         unsigned short nphos_;
 };
@@ -222,6 +228,7 @@ triggerBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HL
 filterBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","PAT"))),
 triggerObjects_(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
 triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger")))
+//packedToken(consumes<edm::View<pat::PackedGenParticle> >(edm::InputTag("packedGenParticles"))),
 //pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
@@ -270,6 +277,9 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("genlepPhi"        ,genlepPhi_              ,"genlepPhi[ngenleps]/F");
     events_->Branch("genlepM"          ,genlepM_                ,"genlepM[ngenleps]/F");
     events_->Branch("genlepID"         ,genlepID_               ,"genlepID[ngenleps]/S");
+    events_->Branch("genlepMID"        ,genlepMID_              ,"genlepMID[ngenleps]/S");
+    events_->Branch("genlepGMID"       ,genlepGMID_             ,"genlepGMID[ngenleps]/S");
+    events_->Branch("genlepGGMID"      ,genlepGGMID_            ,"genlepGGMID[ngenleps]/S");
 
     events_->Branch("genl1l2M"         ,&genl1l2M_              ,"genl1l2M/F");
     events_->Branch("genl1l2Pt"        ,&genl1l2Pt_             ,"genl1l2Pt/F");
@@ -281,6 +291,7 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
     events_->Branch("met"              ,&met_                   ,"met/F");
     events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F");
+    events_->Branch("genmet"           ,&genmet_                ,"genmet/F");
     events_->Branch("t1met"            ,&t1met_                 ,"t1met/F");
     events_->Branch("t1metPhi"         ,&t1metPhi_              ,"t1metPhi/F");
     events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F");
@@ -315,6 +326,8 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("Flag_trkPOG_toomanystripclus53X"              ,&Flag_trkPOG_toomanystripclus53X_	                ,"Flag_trkPOG_toomanystripclus53X/O");
     events_->Branch("Flag_hcalLaserEventFilter"                    ,&Flag_hcalLaserEventFilter_		                ,"Flag_hcalLaserEventFilter/O");
 
+
+    events_->Branch("isDYTauTau"         ,&isDYTauTau_              ,"isDYTauTau/O");
     //events_->Branch(""          ,&               ,"");
 }
 
@@ -333,6 +346,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(rhoHToken, rhoH);
     iEvent.getByToken(pileupToken, pileup);
     iEvent.getByToken(prunedToken, pruned);
+//    iEvent.getByToken(packedToken, packed);   // commented out because not needed at the moment
 //    iEvent.getByToken(pfcandsToken, pfcands);
     iEvent.getByToken(triggerBits_, triggerBits);
     iEvent.getByToken(filterBits_, filterBits);
@@ -423,18 +437,25 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if( isGoodPhoton(photon) ) myPhotons.push_back(&photon); 
     }
 
+    isDYTauTau_ = false;
+
     for (const reco::GenParticle & genParticle: *pruned)
     {
 	int ID     = genParticle.pdgId();
         float pt   = genParticle.pt() ;
         float eta  = genParticle.eta();
         int status = genParticle.status();
+
         if(pt > 10 && fabs(eta) < 2.4 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); 
+	if(pt > 5 && (abs(ID) == 15) && !isDYTauTau_ && getGenMother(&genParticle)->pdgId() == 23)isDYTauTau_ = true;
     }
+
+
 
     const pat::MET &met = mets->front();
     float rawmet      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
     float rawmetPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
+    float genmet      = met.genMET()->pt();
     float rawmetSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
     float t1met       = met.pt();
     float t1metPhi    = met.phi();
@@ -533,11 +554,14 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     ngenleps_                   = (unsigned short) myGenLeptons.size();
     for(int ii = 0 ; ii < ngenlepsMax; ii++) 
     {
-       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()         : 0;
-	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()        : 0;
-	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()        : 0;
-	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()       : 0;
-        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()      : 0;
+       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                               : 0;
+	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                              : 0;
+	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                              : 0;
+	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                             : 0;
+        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                            : 0;
+        genlepMID_     [ii]  = ii < ngenleps_ ? getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
+        genlepGMID_    [ii]  = ii < ngenleps_ ? getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
+        genlepGGMID_   [ii]  = ii < ngenleps_ ? getGenMother(getGenMother(getGenMother(myGenLeptons[ii])))->pdgId()  : 0;
     }
 
     genl1l2DPhi_             = ngenleps_>=2 ? genl1.DeltaPhi(genl2) : 0;
@@ -551,6 +575,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     
     met_                     = rawmet;          
     metPhi_                  = rawmetPhi;
+    genmet_                  = genmet;          
     sumEt_                   = rawmetSumEt;
     t1met_                   = t1met;
     t1metPhi_                = t1metPhi;
@@ -571,8 +596,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     HLT_e1mu2_               = HLT_e1mu2;
     HLT_pfmet_               = HLT_pfmet;
     HLT_pfmetCSV_            = HLT_pfmetCSV;
-
-    // --- filter bits
+    
     // code below was "borrowed" from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
     const edm::TriggerNames &fnames = iEvent.triggerNames(*filterBits);
     for (unsigned int i = 0, n = filterBits->size(); i < n; ++i) 
@@ -595,6 +619,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
       if(filterName=="Flag_hcalLaserEventFilter")	            Flag_hcalLaserEventFilter_ = filterdecision;                           	 
     }
 
+    isDYTauTau_            = isDYTauTau_; // variable has been already initialized & previously set, shown here for completeness
 
     events_->Fill();
 }
@@ -807,6 +832,14 @@ bool SimpleROOT::isGoodVertex(const reco::Vertex &vtx)
   return ( !(vtx.chi2()==0 && vtx.ndof()==0) && vtx.ndof()>=4. && vtx.position().Rho()<=2.0 && fabs(vtx.position().Z())<=24.0 ) ? true : false; 
 }
 
+const reco::Candidate *SimpleROOT::getGenMother(const reco::Candidate* particle) // bet you can't write this in more combact format ;-)
+{
+  if(particle->numberOfMothers() == 0) return particle; // there are no mothers you are sitting on the proton
+  return particle->pdgId() != particle->mother(0)->pdgId() ? particle->mother(0): getGenMother(particle->mother(0));
+}
+
+
+//miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
 float SimpleROOT::getPFIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,
                         const reco::Candidate* ptcl,  
                         float r_iso_min, float r_iso_max, float kt_scale,
