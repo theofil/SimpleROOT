@@ -76,8 +76,10 @@ events->Show(3)
                   31.4781
  lepID           = 13, 
                   -13
- lepGenMatchIndex = 1, 
-                  0
+ lepGenMatchIndex = 0, 
+                  1
+ lepTriggerMatch = 1, 
+                  1
  njets           = 1
  jetPt           = 37.2818
  jetEta          = -2.19965
@@ -91,34 +93,62 @@ events->Show(3)
  rjetM           = 0.13957
  rjetBTag        = 0
  ngenleps        = 2
- genlepPt        = 30.06, 
-                  36.8366
- genlepEta       = -0.398317, 
-                  -2.19914
- genlepPhi       = 2.26368, 
-                  -0.0839442
- genlepM         = 0.105658, 
-                  0.105665
- genlepID        = -13, 
-                  13
+ genlepPt        = 36.8366, 
+                  30.06
+ genlepEta       = -2.19914, 
+                  -0.398317
+ genlepPhi       = -0.0839442, 
+                  2.26368
+ genlepM         = 0.105665, 
+                  0.105658
+ genlepID        = 13, 
+                  -13
+ genlepMID       = 23, 
+                  23
+ genlepGMID      = -3, 
+                  -3
+ genlepGGMID     = 2212, 
+                  2212
  genl1l2M        = 91.8685
  genl1l2Pt       = 26.6092
  genl1l2Eta      = -2.58991
  genl1l2Phi      = 0.852789
- genl1l2DPhi     = 2.34762
+ genl1l2DPhi     = -2.34762
  genl1l2DR       = 2.95877
  nphos           = 0
  met             = 26.6696
  metPhi          = -1.89484
+ genmet          = 1.73535e-06
  t1met           = 28.8569
  t1metPhi        = -1.82337
  sumEt           = 1136.63
  t1sumEt         = 1164.45
  rho             = 12.8935
  nPU             = 30
+ nPUTrue         = 20
  vHT             = 11.6015
  t1vHT           = 14.1531
  jvHT            = 60.6142
+ HLT_e1e2        = 0
+ HLT_mu1mu2      = 1
+ HLT_mu1e2       = 0
+ HLT_e1mu2       = 0
+ HLT_pfmet       = 0
+ HLT_pfmetCSV    = 0
+ Flag_trackingFailureFilter = 1
+ Flag_goodVertices = 1
+ Flag_CSCTightHaloFilter = 1
+ Flag_trkPOGFilters = 1
+ Flag_trkPOG_logErrorTooManyClusters = 1
+ Flag_EcalDeadCellTriggerPrimitiveFilter = 1
+ Flag_ecalLaserCorrFilter = 1
+ Flag_trkPOG_manystripclus53X = 1
+ Flag_eeBadScFilter = 1
+ Flag_METFilters = 0
+ Flag_HBHENoiseFilter = 0
+ Flag_trkPOG_toomanystripclus53X = 1
+ Flag_hcalLaserEventFilter = 1
+ isDYTauTau      = 0
 </samp>
 </pre>
 
