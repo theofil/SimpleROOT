@@ -152,11 +152,6 @@ events->Show(3)
 </samp>
 </pre>
 
-<h4> Missing elements </h4>
-<ul>
-<li> trigger bits </li>
-<li> event flags </li>
-</ul>
 
 <h4> Dogma </h4>
 <ul>
@@ -170,7 +165,7 @@ events->Show(3)
 <li> event selection and logic should be undisturbed by technicalities </li>
 <li> using int when short is OK is not OK, double is forbidden</li>
 <li> keep number of C++ lines minimum, gather everything in a single file </b>
-<li> ntiple file size should be as small as possible </li>
+<li> ntuple file size should be as small as possible </li>
 </ul>
 
 
