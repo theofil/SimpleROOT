@@ -45,6 +45,7 @@
 #define nrjetsMax 10 
 #define nlepsMax 10
 #define ngenlepsMax 10
+#define ngenpartsMax 10
 
 using namespace std;
 
@@ -69,7 +70,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         bool  isGoodLepton(const reco::Candidate *cand){return cand->isElectron() ? isGoodElectron(*((pat::Electron*)cand)) : isGoodMuon(*((pat::Muon*)cand));}
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
-        short getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons);
+//        short getLepGenMatchIndex(const reco::Candidate *, vector<const reco::Candidate *>);
+        short getMatchIndex(const reco::Candidate *, vector<const reco::Candidate *>);
         bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
         const reco::Candidate *getGenMother(const reco::Candidate*); 
        
@@ -161,9 +163,9 @@ class SimpleROOT : public edm::EDAnalyzer {
         float genlepPhi_                  [ngenlepsMax]; 
         float genlepM_                    [ngenlepsMax];   
         short genlepID_                   [ngenlepsMax];
-        short genlepMID_                  [ngenlepsMax]; // mother 
-        short genlepGMID_                 [ngenlepsMax]; // grand mother
-        short genlepGGMID_                [ngenlepsMax]; // grand grand mother
+        int   genlepMID_                  [ngenlepsMax]; // mother 
+        int   genlepGMID_                 [ngenlepsMax]; // grand mother
+        int   genlepGGMID_                [ngenlepsMax]; // grand grand mother
 
         float genl1l2DPhi_;
         float genl1l2DR_;
@@ -171,6 +173,17 @@ class SimpleROOT : public edm::EDAnalyzer {
         float genl1l2M_;
         float genl1l2Eta_;
         float genl1l2Phi_;
+
+        unsigned short ngenparts_;
+        float genpartPt_                   [ngenpartsMax]; 
+        float genpartEta_                  [ngenpartsMax]; 
+        float genpartPhi_                  [ngenpartsMax]; 
+        float genpartM_                    [ngenpartsMax];   
+        int   genpartID_                   [ngenpartsMax]; 
+        int   genpartDID1_                 [ngenpartsMax]; // daugther 1
+        int   genpartDID2_                 [ngenpartsMax]; // daugther 2
+        short genpartDRMI1_                [ngenpartsMax]; // daugther reco match index (genleptons to leptons, genjet to jet)
+        short genpartDRMI2_                [ngenpartsMax]; // daugther reco match index 
 
         float met_;          // raw pf-met
         float metPhi_;
@@ -277,9 +290,9 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("genlepPhi"        ,genlepPhi_              ,"genlepPhi[ngenleps]/F");
     events_->Branch("genlepM"          ,genlepM_                ,"genlepM[ngenleps]/F");
     events_->Branch("genlepID"         ,genlepID_               ,"genlepID[ngenleps]/S");
-    events_->Branch("genlepMID"        ,genlepMID_              ,"genlepMID[ngenleps]/S");
-    events_->Branch("genlepGMID"       ,genlepGMID_             ,"genlepGMID[ngenleps]/S");
-    events_->Branch("genlepGGMID"      ,genlepGGMID_            ,"genlepGGMID[ngenleps]/S");
+    events_->Branch("genlepMID"        ,genlepMID_              ,"genlepMID[ngenleps]/I");
+    events_->Branch("genlepGMID"       ,genlepGMID_             ,"genlepGMID[ngenleps]/I");
+    events_->Branch("genlepGGMID"      ,genlepGGMID_            ,"genlepGGMID[ngenleps]/I");
 
     events_->Branch("genl1l2M"         ,&genl1l2M_              ,"genl1l2M/F");
     events_->Branch("genl1l2Pt"        ,&genl1l2Pt_             ,"genl1l2Pt/F");
@@ -326,8 +339,18 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("Flag_trkPOG_toomanystripclus53X"              ,&Flag_trkPOG_toomanystripclus53X_	                ,"Flag_trkPOG_toomanystripclus53X/O");
     events_->Branch("Flag_hcalLaserEventFilter"                    ,&Flag_hcalLaserEventFilter_		                ,"Flag_hcalLaserEventFilter/O");
 
-
     events_->Branch("isDYTauTau"         ,&isDYTauTau_              ,"isDYTauTau/O");
+
+    events_->Branch("ngenparts"             ,&ngenparts_                ,"ngenparts/s");
+    events_->Branch("genpartPt"             ,genpartPt_                 ,"genpartPt[ngenparts]/F");
+    events_->Branch("genpartEta"            ,genpartEta_                ,"genpartEta[ngenparts]/F");
+    events_->Branch("genpartPhi"            ,genpartPhi_                ,"genpartPhi[ngenparts]/F");
+    events_->Branch("genpartM"              ,genpartM_                  ,"genpartM[ngenparts]/F");
+    events_->Branch("genpartID"             ,genpartID_                 ,"genpartID[ngenparts]/I");
+    events_->Branch("genpartDID1"           ,genpartDID1_               ,"genpartDID1[ngenparts]/I");
+    events_->Branch("genpartDID2"           ,genpartDID2_               ,"genpartDID2[ngenparts]/I");
+    events_->Branch("genpartDRMI1"          ,genpartDRMI1_              ,"genpartDRMI1[ngenparts]/S");
+    events_->Branch("genpartDRMI2"          ,genpartDRMI2_              ,"genpartDRMI2[ngenparts]/S");
     //events_->Branch(""          ,&               ,"");
 }
 
@@ -359,6 +382,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
 
     vector<const reco::Candidate *> myGenLeptons;
+    vector<const reco::Candidate *> myGenParticles; // store here interesting particles, like top, W, Z, higgs
 
     vector<TLorentzVector> hltEgammaCandidates;
     vector<TLorentzVector >hltL3MuonCandidates;
@@ -445,9 +469,17 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         float pt   = genParticle.pt() ;
         float eta  = genParticle.eta();
         int status = genParticle.status();
+        int nod    = genParticle.numberOfDaughters();
+
 
         if(pt > 10 && fabs(eta) < 2.4 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); 
 	if(pt > 5 && (abs(ID) == 15) && !isDYTauTau_ && getGenMother(&genParticle)->pdgId() == 23)isDYTauTau_ = true;
+ 
+        if(nod == 2) // save 1->2 decays of interesting particles
+        if(ID == 23 || abs(ID)==24 || abs(ID)==25 || abs(ID) == 6)
+        {
+            myGenParticles.push_back(&genParticle);
+	}
     }
 
 
@@ -520,10 +552,11 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                                                : 0;
         lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0;  
         lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                                          : 1.e+5;  
-        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getLepGenMatchIndex(myLeptons[ii], myGenLeptons)                      : -1; //function returns -1 if not matched  
+        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getMatchIndex(myLeptons[ii], myGenLeptons)                            : -1; //function returns -1 if not matched  
         lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
     
+   
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
     l1l2DR_                  = nleps_>=2 ? l1.DeltaR(l2) : 0;
     l1l2Pt_                  = nleps_>=2 ? (l1+l2).Pt() : 0;
@@ -554,14 +587,49 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     ngenleps_                   = (unsigned short) myGenLeptons.size();
     for(int ii = 0 ; ii < ngenlepsMax; ii++) 
     {
-       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                               : 0;
-	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                              : 0;
-	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                              : 0;
-	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                             : 0;
-        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                            : 0;
-        genlepMID_     [ii]  = ii < ngenleps_ ? getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
-        genlepGMID_    [ii]  = ii < ngenleps_ ? getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
-        genlepGGMID_   [ii]  = ii < ngenleps_ ? getGenMother(getGenMother(getGenMother(myGenLeptons[ii])))->pdgId()  : 0;
+       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                                    : 0;
+	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                                   : 0;
+	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                                   : 0;
+	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                                  : 0;
+        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                                 : 0;
+        genlepMID_     [ii]  = ii < ngenleps_ ? (int)getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
+        genlepGMID_    [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
+        genlepGGMID_   [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(getGenMother(myGenLeptons[ii])))->pdgId()  : 0;
+    }
+
+    ngenparts_                 = (unsigned short) myGenParticles.size();
+    for(int ii = 0 ; ii < ngenpartsMax; ii++) 
+    {
+       	genpartPt_      [ii]  = ii < ngenparts_ ? myGenParticles[ii]->pt()                                               : 0;
+	genpartEta_     [ii]  = ii < ngenparts_ ? myGenParticles[ii]->eta()                                              : 0;
+	genpartPhi_     [ii]  = ii < ngenparts_ ? myGenParticles[ii]->phi()                                              : 0;
+	genpartM_       [ii]  = ii < ngenparts_ ? myGenParticles[ii]->mass()                                             : 0;
+        genpartID_      [ii]  = ii < ngenparts_ ? myGenParticles[ii]->pdgId()                                            : 0;
+        genpartDID1_    [ii]  = ii < ngenparts_ ? myGenParticles[ii]->daughter(0)->pdgId()                               : 0;
+        genpartDID2_    [ii]  = ii < ngenparts_ ? myGenParticles[ii]->daughter(1)->pdgId()                               : 0;
+
+        genpartDRMI1_   [ii]  = -1; // default values
+        genpartDRMI2_   [ii]  = -1; // default values
+
+        if(abs(genpartDID1_[ii]) == 11 || abs(genpartDID1_[ii])==13) // try to match them to reco leptons
+	{
+     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(0), myLeptons) : -1;
+	}
+
+        if(abs(genpartDID2_[ii]) == 11 || abs(genpartDID2_[ii])==13) // try to match them to reco leptons
+	{
+	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(1), myLeptons) : -1;
+	}
+
+        if(abs(genpartDID1_[ii]) >= 1 && abs(genpartDID1_[ii])<=5) // try to match them to reco jets
+	{
+     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(0), myJets) : -1;
+	}
+
+        if(abs(genpartDID2_[ii]) >= 1 && abs(genpartDID2_[ii])<=5) // try to match them to reco jets
+	{
+	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(1), myJets) : -1;
+        }
     }
 
     genl1l2DPhi_             = ngenleps_>=2 ? genl1.DeltaPhi(genl2) : 0;
@@ -688,6 +756,7 @@ bool SimpleROOT::triggerMatch(const reco::Candidate *myRecoLep, const std::vecto
     return res;
 }
 
+/*
 short SimpleROOT::getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons)
 {
     short myIndex = -1; // don't change this
@@ -699,6 +768,23 @@ short SimpleROOT::getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<
     {
 	TLorentzVector myGenLepP4 = P4(myGenLeptons[genIndex]);
         float myDR = myGenLepP4.DeltaR(myRecoLepP4);
+	if(myDR < DR && myDR < 0.1) myIndex = genIndex;
+    }
+    return myIndex;
+}
+*/
+
+short SimpleROOT::getMatchIndex(const reco::Candidate * particleToBeMatched, vector<const reco::Candidate *> particleList)
+{
+    short myIndex = -1; // don't change this
+    
+    float DR = 1.e+9;
+
+    TLorentzVector particleToBeMatchedP4 = P4(particleToBeMatched);
+    for(unsigned int genIndex = 0; genIndex < particleList.size(); ++genIndex)
+    {
+	TLorentzVector myRecLepP4 = P4(particleList[genIndex]);
+        float myDR = myRecLepP4.DeltaR(particleToBeMatchedP4);
 	if(myDR < DR && myDR < 0.1) myIndex = genIndex;
     }
     return myIndex;

@@ -49,7 +49,8 @@ events->Show(3)
 
 <pre>
 <samp>
-======> EVENT:3
+-- ttH event dumb -- 
+======> EVENT:3 
  goodVtx         = 1
  nVtx            = 23
  eventNum        = 1001324
@@ -149,6 +150,7 @@ events->Show(3)
  Flag_trkPOG_toomanystripclus53X = 1
  Flag_hcalLaserEventFilter = 1
  isDYTauTau      = 0
+
 </samp>
 </pre>
 
