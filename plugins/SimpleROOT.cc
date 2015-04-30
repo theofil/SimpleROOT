@@ -70,8 +70,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         bool  isGoodLepton(const reco::Candidate *cand){return cand->isElectron() ? isGoodElectron(*((pat::Electron*)cand)) : isGoodMuon(*((pat::Muon*)cand));}
   
         float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
-//        short getLepGenMatchIndex(const reco::Candidate *, vector<const reco::Candidate *>);
-        short getMatchIndex(const reco::Candidate *, vector<const reco::Candidate *>);
+        short getMatchedIndex(const reco::Candidate *, vector<const reco::Candidate *>);
         bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
         const reco::Candidate *getGenMother(const reco::Candidate*); 
        
@@ -552,7 +551,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                                                : 0;
         lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0;  
         lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                                          : 1.e+5;  
-        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getMatchIndex(myLeptons[ii], myGenLeptons)                            : -1; //function returns -1 if not matched  
+        lepGenMatchIndex_  [ii]  = ii < nleps_ ? getMatchedIndex(myLeptons[ii], myGenLeptons)                          : -1; //function returns -1 if not matched  
         lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
     
@@ -613,22 +612,22 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
         if(abs(genpartDID1_[ii]) == 11 || abs(genpartDID1_[ii])==13) // try to match them to reco leptons
 	{
-     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(0), myLeptons) : -1;
+     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(0), myLeptons) : -1;
 	}
 
         if(abs(genpartDID2_[ii]) == 11 || abs(genpartDID2_[ii])==13) // try to match them to reco leptons
 	{
-	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(1), myLeptons) : -1;
+	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(1), myLeptons) : -1;
 	}
 
         if(abs(genpartDID1_[ii]) >= 1 && abs(genpartDID1_[ii])<=5) // try to match them to reco jets
 	{
-     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(0), myJets) : -1;
+     	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(0), myJets) : -1;
 	}
 
         if(abs(genpartDID2_[ii]) >= 1 && abs(genpartDID2_[ii])<=5) // try to match them to reco jets
 	{
-	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchIndex(myGenParticles[ii]->daughter(1), myJets) : -1;
+	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(1), myJets) : -1;
         }
     }
 
@@ -756,25 +755,8 @@ bool SimpleROOT::triggerMatch(const reco::Candidate *myRecoLep, const std::vecto
     return res;
 }
 
-/*
-short SimpleROOT::getLepGenMatchIndex(const reco::Candidate * myRecoLep, vector<const reco::Candidate *> myGenLeptons)
-{
-    short myIndex = -1; // don't change this
-    
-    float DR = 1.e+9;
 
-    TLorentzVector myRecoLepP4 = P4(myRecoLep);
-    for(unsigned int genIndex = 0; genIndex < myGenLeptons.size(); ++genIndex)
-    {
-	TLorentzVector myGenLepP4 = P4(myGenLeptons[genIndex]);
-        float myDR = myGenLepP4.DeltaR(myRecoLepP4);
-	if(myDR < DR && myDR < 0.1) myIndex = genIndex;
-    }
-    return myIndex;
-}
-*/
-
-short SimpleROOT::getMatchIndex(const reco::Candidate * particleToBeMatched, vector<const reco::Candidate *> particleList)
+short SimpleROOT::getMatchedIndex(const reco::Candidate * particleToBeMatched, vector<const reco::Candidate *> particleList)
 {
     short myIndex = -1; // don't change this
     
