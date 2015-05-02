@@ -49,91 +49,102 @@ events->Show(3)
 
 <pre>
 <samp>
--- ttH event dumb -- 
-======> EVENT:3 
+// ttH event dumb, with h->bb (gen b matched to reco jets) 
+// and tt-> WWbb -> tau nu mu nu bb -> el nu nu mu nu bb
+======> EVENT:5460
  goodVtx         = 1
- nVtx            = 23
- eventNum        = 1001324
+ nVtx            = 14
+ eventNum        = 8661
  runNum          = 1
- lumi            = 10020
- l1l2M           = 91.1683
- l1l2Pt          = 26.7699
- l1l2Eta         = -2.59355
- l1l2Phi         = 0.80909
- l1l2DPhi        = -2.34752
- l1l2DR          = 2.9592
- nleps           = 2
- lepPt           = 37.2818, 
-                  29.2314
- lepEta          = -2.19965, 
-                  -0.397985
- lepPhi          = -0.0836522, 
-                  2.26387
- lepM            = 0.13957, 
-                  0.13957
- lepIso          = 0.00903365, 
-                  0
- lepPtRel        = 119.693, 
-                  31.4781
- lepID           = 13, 
-                  -13
+ lumi            = 87
+ l1l2M           = 104.73
+ l1l2Pt          = 66.7505
+ l1l2Eta         = 0.0346529
+ l1l2Phi         = 2.14853
+ l1l2DPhi        = -1.70375
+ l1l2DR          = 2.22085
+ nleps           = 3
+ lepPt           = 59.1267, 
+                  39.7924, 20.5614
+ lepEta          = -0.573448, 
+                  0.851136, -0.962983
+ lepPhi          = 1.51639, 
+                  -3.06305, -2.98083
+ lepM            = -0.0103195, 
+                  0.13957, 0.13957
+ lepIso          = 0.0268099, 
+                  0.0265385, 0.105136
+ lepPtRel        = 35.5471, 
+                  48.8876, 13.8101
+ lepID           = -11, 
+                  13, 13
  lepGenMatchIndex = 0, 
-                  1
+                  1, 2
  lepTriggerMatch = 1, 
-                  1
- njets           = 1
- jetPt           = 37.2818
- jetEta          = -2.19965
- jetPhi          = -0.0836522
- jetM            = 0.13957
- jetBTag         = 0
- nrjets          = 1
- rjetPt          = 37.2818
- rjetEta         = -2.19965
- rjetPhi         = -0.0836522
- rjetM           = 0.13957
- rjetBTag        = 0
- ngenleps        = 2
- genlepPt        = 36.8366, 
-                  30.06
- genlepEta       = -2.19914, 
-                  -0.398317
- genlepPhi       = -0.0839442, 
-                  2.26368
- genlepM         = 0.105665, 
-                  0.105658
- genlepID        = 13, 
-                  -13
- genlepMID       = 23, 
-                  23
- genlepGMID      = -3, 
-                  -3
- genlepGGMID     = 2212, 
-                  2212
- genl1l2M        = 91.8685
- genl1l2Pt       = 26.6092
- genl1l2Eta      = -2.58991
- genl1l2Phi      = 0.852789
- genl1l2DPhi     = -2.34762
- genl1l2DR       = 2.95877
- nphos           = 0
- met             = 26.6696
- metPhi          = -1.89484
- genmet          = 1.73535e-06
- t1met           = 28.8569
- t1metPhi        = -1.82337
- sumEt           = 1136.63
- t1sumEt         = 1164.45
- rho             = 12.8935
- nPU             = 30
+                  1, 1
+ njets           = 4
+ jetPt           = 59.1267, 
+                  39.7924, 20.5614, 0
+ jetEta          = -0.573448, 
+                  0.851136, -0.962983, 0
+ jetPhi          = 1.51639, 
+                  -3.06305, -2.98083, 0
+ jetM            = -0.0103195, 
+                  0.13957, 0.13957, 0
+ jetBTag         = 0, 
+                  0, 0, 0
+ nrjets          = 4
+ rjetPt          = 59.1267, 
+                  39.7924, 20.5614, 0
+ rjetEta         = -0.573448, 
+                  0.851136, -0.962983, 0
+ rjetPhi         = 1.51639, 
+                  -3.06305, -2.98083, 0
+ rjetM           = -0.0103195, 
+                  0.13957, 0.13957, 0
+ rjetBTag        = 0, 
+                  0, 0, 0
+ ngenleps        = 4
+ genlepPt        = 60.8975, 
+                  40.284, 20.9083, 13.4696
+ genlepEta       = -0.573406, 
+                  0.85066, -0.962838, -0.0405636
+ genlepPhi       = 1.51499, 
+                  -3.06309, -2.98075, 1.4617
+ genlepM         = 0.000571982, 
+                  0.105658, 0.10566, 0.000511
+ genlepID        = -11, 
+                  13, 13, 11
+ genlepMID       = -15, 
+                  -24, -521, -511
+ genlepGMID      = 24, 
+                  -6, -523, -513
+ genlepGGMID     = 6, 
+                  2212, 5, 5
+ genl1l2M        = 106.949
+ genl1l2Pt       = 68.3688
+ genl1l2Eta      = 0.0246985
+ genl1l2Phi      = 2.13852
+ genl1l2DPhi     = -1.70511
+ genl1l2DR       = 2.22157
+ nphos           = 2
+ met             = 51.6295
+ metPhi          = -0.547856
+ genmet          = 53.396
+ t1met           = 48.2903
+ t1metPhi        = -0.465397
+ sumEt           = 1362.14
+ t1sumEt         = 1398.48
+ rho             = 9.07665
+ nPU             = 17
  nPUTrue         = 20
- vHT             = 11.6015
- t1vHT           = 14.1531
- jvHT            = 60.6142
+ vHT             = 30.0087
+ t1vHT           = 34.8948
+ jvHT            = 142.02
  HLT_e1e2        = 0
  HLT_mu1mu2      = 1
- HLT_mu1e2       = 0
- HLT_e1mu2       = 0
+ HLT_mu1e2       = 1
+ HLT_e1mu2       = 1
  HLT_pfmet       = 0
  HLT_pfmetCSV    = 0
  Flag_trackingFailureFilter = 1
@@ -145,12 +156,30 @@ events->Show(3)
  Flag_ecalLaserCorrFilter = 1
  Flag_trkPOG_manystripclus53X = 1
  Flag_eeBadScFilter = 1
- Flag_METFilters = 0
- Flag_HBHENoiseFilter = 0
+ Flag_METFilters = 1
+ Flag_HBHENoiseFilter = 1
  Flag_trkPOG_toomanystripclus53X = 1
  Flag_hcalLaserEventFilter = 1
  isDYTauTau      = 0
-
+ ngenparts       = 5
+ genpartPt       = 228.19, 
+                  317.025, 167.13, 153.759, 77.1921
+ genpartEta      = 0.892705, 
+                  -0.381775, 0.102876, -0.735381, 0.69443
+ genpartPhi      = -0.800127, 
+                  1.33867, -2.54137, 1.15584, -2.003
+ genpartM        = 125, 
+                  172.589, 173.982, 78.0383, 80.7928
+ genpartID       = 25, 
+                  6, -6, 24, -24
+ genpartDID1     = 5, 
+                  5, -5, 16, -14
+ genpartDID2     = -5, 
+                  24, -24, -15, 13
+ genpartDRMI1    = 3, 
+                  1, 2, -1, -1
+ genpartDRMI2    = 0, 
+                  -1, -1, -1, 1
 </samp>
 </pre>
 
