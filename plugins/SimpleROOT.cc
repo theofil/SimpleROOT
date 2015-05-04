@@ -566,20 +566,20 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     njets_                   = (unsigned short) myJets.size();
     for(int ii = 0 ; ii < njetsMax; ii++) 
     {
-       	jetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
-	jetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
-	jetPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
-	jetM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
+       	jetPt_      [ii]  = ii < njets_ ? myJets[ii]->pt()    : 0;
+	jetEta_     [ii]  = ii < njets_ ? myJets[ii]->eta()   : 0;
+	jetPhi_     [ii]  = ii < njets_ ? myJets[ii]->phi()   : 0;
+	jetM_       [ii]  = ii < njets_ ? myJets[ii]->mass()  : 0;
         jetBTag_    [ii]  = 0;  // TBI 
     }
 
-    nrjets_                   = (unsigned short) myJets.size();
+    nrjets_                   = (unsigned short) myRJets.size();
     for(int ii = 0 ; ii < nrjetsMax; ii++) 
     {
-       	rjetPt_      [ii]  = ii < nleps_ ? myLeptons[ii]->pt()    : 0;
-	rjetEta_     [ii]  = ii < nleps_ ? myLeptons[ii]->eta()   : 0;
-	rjetPhi_     [ii]  = ii < nleps_ ? myLeptons[ii]->phi()   : 0;
-	rjetM_       [ii]  = ii < nleps_ ? myLeptons[ii]->mass()  : 0;
+       	rjetPt_      [ii]  = ii < nrjets_ ? myRJets[ii]->pt()    : 0;
+	rjetEta_     [ii]  = ii < nrjets_ ? myRJets[ii]->eta()   : 0;
+	rjetPhi_     [ii]  = ii < nrjets_ ? myRJets[ii]->phi()   : 0;
+	rjetM_       [ii]  = ii < nrjets_ ? myRJets[ii]->mass()  : 0;
         rjetBTag_    [ii]  = 0;  // TBI 
     }
 

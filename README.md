@@ -27,7 +27,7 @@ https://github.com/theofil/SimpleROOT/blob/master/runme_cfg.py
 
 <h4> How to produce a test ntuple at CERN: </h4>
 
-cd CMSSW_7_3_2/src/Tools/SimpleROOT
+cd CMSSW_7_3_2/src/Tools/SimpleROOT <br>
 cmsRun runme_cfg.py
 
 <h4> How an ntuple looks like ? </h4>
@@ -83,27 +83,27 @@ events->Show(3)
  lepTriggerMatch = 1, 
                   1, 1
  njets           = 4
- jetPt           = 59.1267, 
-                  39.7924, 20.5614, 0
- jetEta          = -0.573448, 
-                  0.851136, -0.962983, 0
- jetPhi          = 1.51639, 
-                  -3.06305, -2.98083, 0
- jetM            = -0.0103195, 
-                  0.13957, 0.13957, 0
+ jetPt           = 181.486, 
+                  151.462, 123.325, 56.1344
+ jetEta          = 0.474995, 
+                  -0.00419258, -0.386739, 1.6311
+ jetPhi          = -0.787108, 
+                  1.51442, -2.99017, -0.772743
+ jetM            = 14.83, 
+                  14.4056, 19.6194, 8.24497
  jetBTag         = 0, 
                   0, 0, 0
- nrjets          = 4
- rjetPt          = 59.1267, 
-                  39.7924, 20.5614, 0
- rjetEta         = -0.573448, 
-                  0.851136, -0.962983, 0
- rjetPhi         = 1.51639, 
-                  -3.06305, -2.98083, 0
- rjetM           = -0.0103195, 
-                  0.13957, 0.13957, 0
+ nrjets          = 2
+ rjetPt          = 64.4035, 
+                  44.9823
+ rjetEta         = -0.579714, 
+                  0.859564
+ rjetPhi         = 1.5235, 
+                  -3.05334
+ rjetM           = 4.81469, 
+                  5.26755
  rjetBTag        = 0, 
-                  0, 0, 0
+                  0
  ngenleps        = 4
  genlepPt        = 60.8975, 
                   40.284, 20.9083, 13.4696
@@ -180,6 +180,7 @@ events->Show(3)
                   1, 2, -1, -1
  genpartDRMI2    = 0, 
                   -1, -1, -1, 1
+
 </samp>
 </pre>
 
