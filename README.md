@@ -37,7 +37,7 @@ Download this <a href="http://theofil.web.cern.ch/theofil/get/output.root">file<
 <pre>
 <code>
 root -l output.root 
-demo->cd() 
+demo->cd() // The ROOT tree is inside the demo directory 
 
 TCut sel_SF("(lepID[0]*lepID[1] == -11*11 || lepID[0]*lepID[1] == -13*13)")
 TCut sel_lep2020("l1l2DR>0.3 && lepPt[1]>20")
