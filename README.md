@@ -1,6 +1,6 @@
 # SimpleROOT
 
-This is a very simple MiniAOD analyzer producing a flat ROOT TTree for physics analysis,
+This is a MiniAOD analyzer producing a flat ROOT TTree for physics analysis,
 of leptons, photons, jets and MET.
 
 <h4> How to install this at CERN:  </h4>

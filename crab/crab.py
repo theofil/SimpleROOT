@@ -2,7 +2,7 @@
 from CRABClient.UserUtilities import config
 config = config()
 
-config.General.requestName = 'ttbar_reliso_v2'
+config.General.requestName = 'ttbar_reliso_v3'
 config.General.workArea = 'crab_projects'
 
 config.JobType.pluginName = 'Analysis'
