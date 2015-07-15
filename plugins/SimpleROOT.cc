@@ -763,10 +763,15 @@ short SimpleROOT::getMatchedIndex(const reco::Candidate * particleToBeMatched, v
     float DR = 1.e+9;
 
     TLorentzVector particleToBeMatchedP4 = P4(particleToBeMatched);
+    int particleToBeMatchedID = particleToBeMatched->pdgId();
+
     for(unsigned int genIndex = 0; genIndex < particleList.size(); ++genIndex)
     {
 	TLorentzVector myRecLepP4 = P4(particleList[genIndex]);
         float myDR = myRecLepP4.DeltaR(particleToBeMatchedP4);
+        int particleID = particleList[genIndex]->pdgId();
+
+        if(particleID == particleToBeMatchedID)        // considers matching only of correct charge + ID
 	if(myDR < DR && myDR < 0.1) myIndex = genIndex;
     }
     return myIndex;
