@@ -33,6 +33,7 @@
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
+#include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
@@ -93,6 +94,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<edm::TriggerResults> filterBits;
         edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
         edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
+        edm::Handle<LHEEventProduct> LHEEventInfo;
 
         
     	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
@@ -110,6 +112,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<edm::TriggerResults> filterBits_;
         edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
         edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescales_;
+        edm::EDGetTokenT<LHEEventProduct> LHEEventProductToken_;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -222,6 +225,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 	bool Flag_hcalLaserEventFilter_;		 
 
 	bool isDYTauTau_; 
+        bool isData_;
 
         unsigned short nphos_;
 };
@@ -239,7 +243,8 @@ prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParamete
 triggerBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HLT"))),
 filterBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","PAT"))),
 triggerObjects_(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
-triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger")))
+triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger"))),
+LHEEventProductToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer")))
 //packedToken(consumes<edm::View<pat::PackedGenParticle> >(edm::InputTag("packedGenParticles"))),
 //pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
@@ -339,6 +344,7 @@ triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigge
     events_->Branch("Flag_hcalLaserEventFilter"                    ,&Flag_hcalLaserEventFilter_		                ,"Flag_hcalLaserEventFilter/O");
 
     events_->Branch("isDYTauTau"         ,&isDYTauTau_              ,"isDYTauTau/O");
+    events_->Branch("isData"             ,&isData_                  ,"isData/O");
 
     events_->Branch("ngenparts"             ,&ngenparts_                ,"ngenparts/s");
     events_->Branch("genpartPt"             ,genpartPt_                 ,"genpartPt[ngenparts]/F");
@@ -374,6 +380,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(filterBits_, filterBits);
     iEvent.getByToken(triggerObjects_, triggerObjects);
     iEvent.getByToken(triggerPrescales_, triggerPrescales);
+    iEvent.getByToken(LHEEventProductToken_, LHEEventInfo);
+    
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
@@ -540,6 +548,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     runNum_                  = iEvent.id().run();
     lumi_                    = iEvent.luminosityBlock();
     eventNum_                = iEvent.id().event();
+    isData_                  = iEvent.isRealData();
 
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
@@ -570,7 +579,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	jetEta_     [ii]  = ii < njets_ ? myJets[ii]->eta()   : 0;
 	jetPhi_     [ii]  = ii < njets_ ? myJets[ii]->phi()   : 0;
 	jetM_       [ii]  = ii < njets_ ? myJets[ii]->mass()  : 0;
-        jetBTag_    [ii]  = 0;  // TBI 
+        jetBTag_    [ii]  = ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags") : 0;  // Phys14 0.679 nominal cut
     }
 
     nrjets_                   = (unsigned short) myRJets.size();
@@ -580,7 +589,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	rjetEta_     [ii]  = ii < nrjets_ ? myRJets[ii]->eta()   : 0;
 	rjetPhi_     [ii]  = ii < nrjets_ ? myRJets[ii]->phi()   : 0;
 	rjetM_       [ii]  = ii < nrjets_ ? myRJets[ii]->mass()  : 0;
-        rjetBTag_    [ii]  = 0;  // TBI 
+        rjetBTag_    [ii]  = ii < nrjets_ ? ((pat::Jet*) myRJets[ii])->bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags")  : 0;  // Phys14 0.679 nominal cut 
     }
 
     ngenleps_                   = (unsigned short) myGenLeptons.size();
