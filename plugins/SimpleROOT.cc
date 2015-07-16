@@ -27,6 +27,7 @@
 #include "DataFormats/PatCandidates/interface/Photon.h"
 #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
 #include "DataFormats/PatCandidates/interface/PackedGenParticle.h"
+#include "DataFormats/JetReco/interface/GenJet.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 #include "FWCore/Common/interface/TriggerNames.h"
@@ -97,6 +98,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
         edm::Handle<LHEEventProduct> LHEEventInfo;
         edm::Handle<GenEventInfoProduct> genEvtInfo;
+        edm::Handle<edm::View<reco::GenJet>> genjets;
 
         
     	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
@@ -116,6 +118,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescalesToken;
         edm::EDGetTokenT<LHEEventProduct> LHEEventProductToken;
         edm::EDGetTokenT<GenEventInfoProduct> GenEventInfoProductToken;
+        edm::EDGetTokenT<edm::View<reco::GenJet>> genjetsToken;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -155,6 +158,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float jetPhi_                     [njetsMax]; 
         float jetM_                       [njetsMax]; 
         float jetBTag_                    [njetsMax];
+        float jetGenPt_                   [njetsMax];
 
         unsigned short nrjets_;          
         float rjetPt_                     [nrjetsMax]; 
@@ -251,7 +255,8 @@ filterBitsToken(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","",
 triggerObjectsToken(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
 triggerPrescalesToken(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger"))),
 LHEEventProductToken(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"))),
-GenEventInfoProductToken(consumes<GenEventInfoProduct>(edm::InputTag("generator")))
+GenEventInfoProductToken(consumes<GenEventInfoProduct>(edm::InputTag("generator"))),
+genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("slimmedGenJets",edm::InputTag("slimmedGenJets"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
     events_ = fileService_->make<TTree>("events","events");
@@ -286,6 +291,7 @@ GenEventInfoProductToken(consumes<GenEventInfoProduct>(edm::InputTag("generator"
     events_->Branch("jetPhi"           ,jetPhi_                 ,"jetPhi[njets]/F");
     events_->Branch("jetM"             ,jetM_                   ,"jetM[njets]/F");
     events_->Branch("jetBTag"          ,jetBTag_                ,"jetBTag[njets]/F");
+    events_->Branch("jetGenPt"         ,jetGenPt_               ,"jetGenPt[njets]/F");
 
     events_->Branch("nrjets"           ,&nrjets_                ,"nrjets/s");
     events_->Branch("rjetPt"           ,rjetPt_                 ,"rjetPt[nrjets]/F");
@@ -390,6 +396,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     {
     	iEvent.getByToken(prunedToken, pruned);
         iEvent.getByToken(GenEventInfoProductToken, genEvtInfo);
+    	iEvent.getByToken(genjetsToken, genjets);
 //   iEvent.getByToken(LHEEventProductToken, LHEEventInfo); iEvent.getByToken(packedToken, packed);    iEvent.getByToken(pfcandsToken, pfcands);
     }
 
@@ -400,6 +407,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     vector<const reco::Candidate *> myGenLeptons;
     vector<const reco::Candidate *> myGenParticles; // store here interesting particles, like top, W, Z, higgs
+    vector<const reco::Candidate *> myGenJets; // in this container we will store all prompt jets (PV)
 
     vector<TLorentzVector> hltEgammaCandidates;
     vector<TLorentzVector >hltL3MuonCandidates;
@@ -447,13 +455,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	}
     }
 
-    // --- get LHE Event info 
-    if(LHEEventInfo.isValid())
-    {
-//	vector <gen::WeightsInfo> weightsTemp = LHEEventInfo->weights();
-	cout << LHEEventInfo->hepeup().XWGTUP << endl;
-    }
-
     // --- loop inside the objects
     for (const reco::Vertex &PV : *vertices)
     {
@@ -478,6 +479,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if( isGoodJet(myjet) && !isLeptonMatched ) myJets.push_back(&myjet);
 	if( isGoodJet(myjet) && isLeptonMatched ) myRJets.push_back(&myjet);
     }
+
+    for(const reco::GenJet &myjet : *genjets)  // fill-up all gen jets no cut (pdgId = 0 for genjets)
+    {
+	myGenJets.push_back(&myjet);
+    }
+
 
     for (const pat::Photon &photon : *photons) 
     {
@@ -592,11 +599,14 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     njets_                   = (unsigned short) myJets.size();
     for(int ii = 0 ; ii < njetsMax; ii++) 
     {
+        int genjetMatchedIndex = ii < njets_ ? getMatchedIndex(myJets[ii], myGenJets): -1;
+
        	jetPt_      [ii]  = ii < njets_ ? myJets[ii]->pt()    : 0;
 	jetEta_     [ii]  = ii < njets_ ? myJets[ii]->eta()   : 0;
 	jetPhi_     [ii]  = ii < njets_ ? myJets[ii]->phi()   : 0;
 	jetM_       [ii]  = ii < njets_ ? myJets[ii]->mass()  : 0;
         jetBTag_    [ii]  = ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags") : 0;  // Phys14 0.679 nominal cut
+        jetGenPt_   [ii]  = ii < njets_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
     }
 
     nrjets_                   = (unsigned short) myRJets.size();
@@ -787,6 +797,7 @@ short SimpleROOT::getMatchedIndex(const reco::Candidate * particleToBeMatched, v
     short myIndex = -1; // don't change this
     
     float DR = 1.e+9;
+
 
     TLorentzVector particleToBeMatchedP4 = P4(particleToBeMatched);
     int particleToBeMatchedID = particleToBeMatched->pdgId();
