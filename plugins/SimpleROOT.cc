@@ -34,6 +34,7 @@
 #include "DataFormats/PatCandidates/interface/TriggerObjectStandAlone.h"
 #include "DataFormats/PatCandidates/interface/PackedTriggerPrescales.h"
 #include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
+#include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
@@ -95,6 +96,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::Handle<pat::TriggerObjectStandAloneCollection> triggerObjects;
         edm::Handle<pat::PackedTriggerPrescales> triggerPrescales;
         edm::Handle<LHEEventProduct> LHEEventInfo;
+        edm::Handle<GenEventInfoProduct> genEvtInfo;
 
         
     	edm::EDGetTokenT<reco::VertexCollection> verticesToken;
@@ -108,11 +110,12 @@ class SimpleROOT : public edm::EDAnalyzer {
         edm::EDGetTokenT<edm::View<reco::GenParticle>> prunedToken;
         edm::EDGetTokenT<edm::View<pat::PackedGenParticle>> packedToken;
         edm::EDGetTokenT<pat::PackedCandidateCollection> pfcandsToken;
-        edm::EDGetTokenT<edm::TriggerResults> triggerBits_;
-        edm::EDGetTokenT<edm::TriggerResults> filterBits_;
-        edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjects_;
-        edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescales_;
-        edm::EDGetTokenT<LHEEventProduct> LHEEventProductToken_;
+        edm::EDGetTokenT<edm::TriggerResults> triggerBitsToken;
+        edm::EDGetTokenT<edm::TriggerResults> filterBitsToken;
+        edm::EDGetTokenT<pat::TriggerObjectStandAloneCollection> triggerObjectsToken;
+        edm::EDGetTokenT<pat::PackedTriggerPrescales> triggerPrescalesToken;
+        edm::EDGetTokenT<LHEEventProduct> LHEEventProductToken;
+        edm::EDGetTokenT<GenEventInfoProduct> GenEventInfoProductToken;
 
         reco::Vertex vtx; // stores event's primary vertex
 
@@ -126,6 +129,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         unsigned long eventNum_;
         unsigned int runNum_;
         unsigned int lumi_;
+        float genWeight_;
 
         float l1l2DPhi_;
         float l1l2DR_;
@@ -240,13 +244,14 @@ photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slim
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
 prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles")))),
-triggerBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HLT"))),
-filterBits_(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","PAT"))),
-triggerObjects_(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
-triggerPrescales_(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger"))),
-LHEEventProductToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer")))
-//packedToken(consumes<edm::View<pat::PackedGenParticle> >(edm::InputTag("packedGenParticles"))),
-//pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates"))))
+packedToken(consumes<edm::View<pat::PackedGenParticle> >(edm::InputTag("packedGenParticles"))),
+pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates")))),
+triggerBitsToken(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","HLT"))),
+filterBitsToken(consumes<edm::TriggerResults>(edm::InputTag("TriggerResults","","PAT"))),
+triggerObjectsToken(consumes<pat::TriggerObjectStandAloneCollection>(edm::InputTag("selectedPatTrigger"))),
+triggerPrescalesToken(consumes<pat::PackedTriggerPrescales>(edm::InputTag("patTrigger"))),
+LHEEventProductToken(consumes<LHEEventProduct>(edm::InputTag("externalLHEProducer"))),
+GenEventInfoProductToken(consumes<GenEventInfoProduct>(edm::InputTag("generator")))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
     events_ = fileService_->make<TTree>("events","events");
@@ -255,6 +260,7 @@ LHEEventProductToken_(consumes<LHEEventProduct>(edm::InputTag("externalLHEProduc
     events_->Branch("eventNum"         ,&eventNum_              ,"eventNum/l");
     events_->Branch("runNum"           ,&runNum_                ,"runNum/i");
     events_->Branch("lumi"             ,&lumi_                  ,"lumi/i");
+    events_->Branch("genWeight"        ,&genWeight_             ,"genWeight/F");
 
     events_->Branch("l1l2M"            ,&l1l2M_                 ,"l1l2M/F");
     events_->Branch("l1l2Pt"           ,&l1l2Pt_                ,"l1l2Pt/F");
@@ -365,6 +371,8 @@ SimpleROOT::~SimpleROOT() {}
 // ------------ method called for each event  ------------
 void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+    isData_ = iEvent.isRealData();
+
     iEvent.getByToken(verticesToken, vertices);  
     iEvent.getByToken(muonsToken, muons);
     iEvent.getByToken(electronsToken, electrons);
@@ -373,15 +381,17 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(photonsToken, photons);
     iEvent.getByToken(rhoHToken, rhoH);
     iEvent.getByToken(pileupToken, pileup);
-    iEvent.getByToken(prunedToken, pruned);
-//    iEvent.getByToken(packedToken, packed);   // commented out because not needed at the moment
-//    iEvent.getByToken(pfcandsToken, pfcands);
-    iEvent.getByToken(triggerBits_, triggerBits);
-    iEvent.getByToken(filterBits_, filterBits);
-    iEvent.getByToken(triggerObjects_, triggerObjects);
-    iEvent.getByToken(triggerPrescales_, triggerPrescales);
-    iEvent.getByToken(LHEEventProductToken_, LHEEventInfo);
-    
+    iEvent.getByToken(triggerBitsToken, triggerBits);
+    iEvent.getByToken(filterBitsToken, filterBits);
+    iEvent.getByToken(triggerObjectsToken, triggerObjects);
+    iEvent.getByToken(triggerPrescalesToken, triggerPrescales);
+
+    if(!isData_)  // available only for MC
+    {
+    	iEvent.getByToken(prunedToken, pruned);
+        iEvent.getByToken(GenEventInfoProductToken, genEvtInfo);
+//   iEvent.getByToken(LHEEventProductToken, LHEEventInfo); iEvent.getByToken(packedToken, packed);    iEvent.getByToken(pfcandsToken, pfcands);
+    }
 
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
@@ -437,6 +447,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	}
     }
 
+    // --- get LHE Event info 
+    if(LHEEventInfo.isValid())
+    {
+//	vector <gen::WeightsInfo> weightsTemp = LHEEventInfo->weights();
+	cout << LHEEventInfo->hepeup().XWGTUP << endl;
+    }
 
     // --- loop inside the objects
     for (const reco::Vertex &PV : *vertices)
@@ -470,6 +486,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     isDYTauTau_ = false;
 
+    if(!isData_)
     for (const reco::GenParticle & genParticle: *pruned)
     {
 	int ID     = genParticle.pdgId();
@@ -548,7 +565,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     runNum_                  = iEvent.id().run();
     lumi_                    = iEvent.luminosityBlock();
     eventNum_                = iEvent.id().event();
-    isData_                  = iEvent.isRealData();
+    isData_                  = isData_; // has been filled upstream
+    genWeight_               = isData_ ? genEvtInfo->weight() : 0 ;
 
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
@@ -564,7 +582,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
     
-   
     l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
     l1l2DR_                  = nleps_>=2 ? l1.DeltaR(l2) : 0;
     l1l2Pt_                  = nleps_>=2 ? (l1+l2).Pt() : 0;
