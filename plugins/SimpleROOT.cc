@@ -219,12 +219,12 @@ class SimpleROOT : public edm::EDAnalyzer {
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
 
-	bool HLT_e1e2_; 
-	bool HLT_mu1mu2_; 
-	bool HLT_mu1e2_; 
-	bool HLT_e1mu2_; 
-	bool HLT_pfmet_; 
-	bool HLT_pfmetCSV_; 
+	unsigned short HLT_e1e2_;   // 0 if not fired, otherwise store the prescale (should be 1 for unprescaled paths) 
+	unsigned short HLT_mu1mu2_; 
+	unsigned short HLT_mu1e2_; 
+	unsigned short HLT_e1mu2_; 
+	unsigned short HLT_pfmet_; 
+	unsigned short HLT_pfmetCSV_; 
        
 	bool Flag_trackingFailureFilter_;		        
 	bool Flag_goodVertices_;			 
@@ -349,12 +349,12 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
 
-    events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/O");
-    events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/O");
-    events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/O");
-    events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/O");
-    events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/O");
-    events_->Branch("HLT_pfmetCSV"     ,&HLT_pfmetCSV_          ,"HLT_pfmetCSV/O");
+    events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/s");
+    events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/s");
+    events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/s");
+    events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/s");
+    events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/s");
+    events_->Branch("HLT_pfmetCSV"     ,&HLT_pfmetCSV_          ,"HLT_pfmetCSV/s");
 
     events_->Branch("Flag_trackingFailureFilter"                   ,&Flag_trackingFailureFilter_	                ,"Flag_trackingFailureFilter/O");
     events_->Branch("Flag_goodVertices"                            ,&Flag_goodVertices_			                ,"Flag_goodVertices/O");
@@ -429,12 +429,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<TLorentzVector >hltL3MuonCandidates;
 
     // --- trigger info
-    bool HLT_e1e2(false);
-    bool HLT_mu1mu2(false);
-    bool HLT_mu1e2(false);
-    bool HLT_e1mu2(false);
-    bool HLT_pfmet(false);
-    bool HLT_pfmetCSV(false);
+    unsigned short HLT_e1e2     = 0;
+    unsigned short HLT_mu1mu2   = 0;
+    unsigned short HLT_mu1e2    = 0;
+    unsigned short HLT_e1mu2    = 0;
+    unsigned short HLT_pfmet    = 0;
+    unsigned short HLT_pfmetCSV = 0;
 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) 
@@ -442,17 +442,17 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	string trigger_name = string(names.triggerName(i));
         trigger_name.pop_back();
 
-        if(trigger_name == string("HLT_Ele23_Ele12_CaloId_TrackId_Iso_v")                       && triggerBits->accept(i)) HLT_e1e2     = true; 
-        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_v")                         && triggerBits->accept(i)) HLT_mu1mu2   = true;         
-        if(trigger_name == string("HLT_Mu23_TrkIsoVVL_Ele12_Gsf_CaloId_TrackId_Iso_MediumWP_v") && triggerBits->accept(i)) HLT_mu1e2    = true;         
-        if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele23_Gsf_CaloId_TrackId_Iso_MediumWP_v")  && triggerBits->accept(i)) HLT_e1mu2    = true; 
-        if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                                && triggerBits->accept(i)) HLT_pfmet    = true; 
-        if(trigger_name == string("HLT_PFMET120_NoiseCleaned_BTagCSV07_v")                      && triggerBits->accept(i)) HLT_pfmetCSV = true; 
+        if(trigger_name == string("HLT_Ele17_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v")          && triggerBits->accept(i)) HLT_e1e2     = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v")                && triggerBits->accept(i)) HLT_mu1mu2   = triggerPrescales->getPrescaleForIndex(i);
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v")    && triggerBits->accept(i)) HLT_mu1e2    = triggerPrescales->getPrescaleForIndex(i);  
+        if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v")     && triggerBits->accept(i)) HLT_e1mu2    = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                          && triggerBits->accept(i)) HLT_pfmet    = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v")              && triggerBits->accept(i)) HLT_pfmetCSV = triggerPrescales->getPrescaleForIndex(i); 
     }
 
 
    // --- store HLT trigger objects for offline matching
-   if(HLT_e1e2 || HLT_mu1mu2 || HLT_mu1e2 || HLT_e1mu2)
+   if(HLT_e1e2 !=0 || HLT_mu1mu2 !=0 || HLT_mu1e2 !=0 || HLT_e1mu2 !=0)
    {
 	for (pat::TriggerObjectStandAlone obj : *triggerObjects) 
 	{
