@@ -244,6 +244,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         bool isData_;
 
         unsigned short nphos_;
+        TH1I *mcWeights_;
 };
 
 SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig):  // initialize tokens in the constructor, better performance
@@ -267,6 +268,8 @@ GenEventInfoProductToken(consumes<GenEventInfoProduct>(edm::InputTag("generator"
 genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("slimmedGenJets",edm::InputTag("slimmedGenJets"))))
 //Token(consumes<>(iConfig.getUntrackedParameter("",edm::InputTag("")))),  // first arg is default the second is used only if is defined in runme_cfg.py
 {
+    mcWeights_ = fileService_->make<TH1I>("mcWeights","mcWeights", 4, -2, 2);
+
     events_ = fileService_->make<TTree>("events","events");
     events_->Branch("goodVtx"          ,&goodVtx_               ,"goodVtx/O");
     events_->Branch("nVtx"             ,&nVtx_                  ,"nVtx/s");
@@ -605,6 +608,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     eventNum_                = iEvent.id().event();
     isData_                  = isData_; // has been filled upstream
     genWeight_               = !isData_ ? genEvtInfo->weight() : 0 ;
+
+    if(genWeight_<0) mcWeights_->Fill(-0.999);
+    if(genWeight_>0) mcWeights_->Fill(+0.999);
 
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
