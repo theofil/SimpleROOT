@@ -45,6 +45,7 @@
 
 
 #define njetsMax 30 
+#define njetsFWMax 30 
 #define nrjetsMax 10 
 #define nlepsMax 10
 #define ngenlepsMax 10
@@ -159,6 +160,13 @@ class SimpleROOT : public edm::EDAnalyzer {
         float jetM_                       [njetsMax]; 
         float jetBTag_                    [njetsMax];
         float jetGenPt_                   [njetsMax];
+
+        unsigned short njetsFW_;
+        float jetFWPt_                    [njetsFWMax]; 
+        float jetFWEta_                   [njetsFWMax]; 
+        float jetFWPhi_                   [njetsFWMax]; 
+        float jetFWM_                     [njetsFWMax]; 
+        float jetFWGenPt_                 [njetsFWMax];
 
         unsigned short nrjets_;          
         float rjetPt_                     [nrjetsMax]; 
@@ -293,6 +301,13 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("jetBTag"          ,jetBTag_                ,"jetBTag[njets]/F");
     events_->Branch("jetGenPt"         ,jetGenPt_               ,"jetGenPt[njets]/F");
 
+    events_->Branch("njetsFW"          ,&njetsFW_               ,"njetsFW/s");
+    events_->Branch("jetFWPt"          ,jetFWPt_                ,"jetFWPt[njetsFW]/F");
+    events_->Branch("jetFWEta"         ,jetFWEta_               ,"jetFWEta[njetsFW]/F");
+    events_->Branch("jetFWPhi"         ,jetFWPhi_               ,"jetFWPhi[njetsFW]/F");
+    events_->Branch("jetFWM"           ,jetFWM_                 ,"jetFWM[njetsFW]/F");
+    events_->Branch("jetFWGenPt"       ,jetFWGenPt_             ,"jetFWGenPt[njetsFW]/F");
+
     events_->Branch("nrjets"           ,&nrjets_                ,"nrjets/s");
     events_->Branch("rjetPt"           ,rjetPt_                 ,"rjetPt[nrjets]/F");
     events_->Branch("rjetEta"          ,rjetEta_                ,"rjetEta[nrjets]/F");
@@ -403,6 +418,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<const reco::Candidate *> myLeptons; // in this container we will store all selected RECO electrons and RECO muons 
     vector<const reco::Candidate *> myJets; // in this container we will store all prompt jets (PV)
     vector<const reco::Candidate *> myRJets; // in this container we will all rejected prompt jets (PV) -- due to DR matching with myLeptons
+    vector<const reco::Candidate *> myJetsFW; // in this container we will store all prompt jets (PV)
     vector<const reco::Candidate *> myPhotons; // in this container we will store all photons
 
     vector<const reco::Candidate *> myGenLeptons;
@@ -474,10 +490,20 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     {
 	bool isLeptonMatched = false;
         float DRmax = 0.4;
+        bool isCE = true;
+
+        if(myjet.pt() < 30) continue;  // considers only jets above 30
+
+        if(fabs(myjet.eta()) > 2.4) isCE = false;
+
         for(auto & lep: myLeptons) if( P4(lep).DeltaR( P4(&myjet) ) < DRmax ) isLeptonMatched = true;
 
-	if( isGoodJet(myjet) && !isLeptonMatched ) myJets.push_back(&myjet);
-	if( isGoodJet(myjet) && isLeptonMatched ) myRJets.push_back(&myjet);
+        // save central jets 
+	if( isGoodJet(myjet) && !isLeptonMatched && isCE) myJets.push_back(&myjet);
+	if( isGoodJet(myjet) && isLeptonMatched  && isCE ) myRJets.push_back(&myjet);
+
+        // save all forward jets
+	if( isGoodJet(myjet) && !isCE) myJetsFW.push_back(&myjet);
     }
 
     for(const reco::GenJet &myjet : *genjets)  // fill-up all gen jets no cut (pdgId = 0 for genjets)
@@ -527,6 +553,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     //  --- sort by pt all objects, the [] is a C++11 lambda func 
     std::sort(myLeptons.begin(), myLeptons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
     std::sort(myJets.begin(), myJets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
+    std::sort(myJetsFW.begin(), myJetsFW.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
     std::sort(myRJets.begin(), myRJets.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
     std::sort(myPhotons.begin(), myPhotons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
     std::sort(myGenLeptons.begin(), myGenLeptons.end(), [](const reco::Candidate * a, const reco::Candidate * b){return a->pt() > b->pt();} );
@@ -609,6 +636,18 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         jetGenPt_   [ii]  = ii < njets_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
     }
 
+    njetsFW_                   = (unsigned short) myJetsFW.size();
+    for(int ii = 0 ; ii < njetsFWMax; ii++) 
+    {
+        int genjetMatchedIndex = ii < njetsFW_ ? getMatchedIndex(myJetsFW[ii], myGenJets): -1;
+
+       	jetFWPt_      [ii]  = ii < njetsFW_ ? myJetsFW[ii]->pt()    : 0;
+	jetFWEta_     [ii]  = ii < njetsFW_ ? myJetsFW[ii]->eta()   : 0;
+	jetFWPhi_     [ii]  = ii < njetsFW_ ? myJetsFW[ii]->phi()   : 0;
+	jetFWM_       [ii]  = ii < njetsFW_ ? myJetsFW[ii]->mass()  : 0;
+        jetFWGenPt_   [ii]  = ii < njetsFW_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
+    }
+
     nrjets_                   = (unsigned short) myRJets.size();
     for(int ii = 0 ; ii < nrjetsMax; ii++) 
     {
@@ -656,12 +695,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(1), myLeptons) : -1;
 	}
 
-        if(abs(genpartDID1_[ii]) >= 1 && abs(genpartDID1_[ii])<=5) // try to match them to reco jets
+        if(abs(genpartDID1_[ii]) >= 1 && abs(genpartDID1_[ii])<=5) // try to match them to reco central jets
 	{
      	    genpartDRMI1_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(0), myJets) : -1;
 	}
 
-        if(abs(genpartDID2_[ii]) >= 1 && abs(genpartDID2_[ii])<=5) // try to match them to reco jets
+        if(abs(genpartDID2_[ii]) >= 1 && abs(genpartDID2_[ii])<=5) // try to match them to reco central jets
 	{
 	    genpartDRMI2_   [ii]  = ii < ngenparts_ ?  getMatchedIndex(myGenParticles[ii]->daughter(1), myJets) : -1;
         }
@@ -741,12 +780,7 @@ bool SimpleROOT::isGoodPhoton(const pat::Photon &photon)
 
 bool SimpleROOT::isGoodJet(const pat::Jet &myJet)
 {
-    bool res = true; // by default is good, unless fails a cut bellow
-
-    if(myJet.pt() < 30) res = false; 
-    if(fabs(myJet.eta()) > 2.4) res = false;
-
-    return res;
+    return true; // no jet-id for the moment
 }
 
 bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
