@@ -401,7 +401,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(metsToken, mets);
     iEvent.getByToken(photonsToken, photons);
     iEvent.getByToken(rhoHToken, rhoH);
-    iEvent.getByToken(pileupToken, pileup);
     iEvent.getByToken(triggerBitsToken, triggerBits);
     iEvent.getByToken(filterBitsToken, filterBits);
     iEvent.getByToken(triggerObjectsToken, triggerObjects);
@@ -412,6 +411,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     	iEvent.getByToken(prunedToken, pruned);
         iEvent.getByToken(GenEventInfoProductToken, genEvtInfo);
     	iEvent.getByToken(genjetsToken, genjets);
+        iEvent.getByToken(pileupToken, pileup);
 //   iEvent.getByToken(LHEEventProductToken, LHEEventInfo); iEvent.getByToken(packedToken, packed);    iEvent.getByToken(pfcandsToken, pfcands);
     }
 
@@ -481,10 +481,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     {
 	if(isGoodMuon(mu)) myLeptons.push_back(&mu);
     }
+
+
     for (const pat::Electron &el : *electrons)
     {
 	if(isGoodElectron(el)) myLeptons.push_back(&el);
     }
+
 
     for(const pat::Jet &myjet : *jets)
     {
@@ -506,6 +509,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if( isGoodJet(myjet) && !isCE) myJetsFW.push_back(&myjet);
     }
 
+    if(!isData_)
     for(const reco::GenJet &myjet : *genjets)  // fill-up all gen jets no cut (pdgId = 0 for genjets)
     {
 	myGenJets.push_back(&myjet);
@@ -539,12 +543,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	}
     }
 
-
-
     const pat::MET &met = mets->front();
     float rawmet      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
     float rawmetPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
-    float genmet      = met.genMET()->pt();
+    float genmet      = !isData_ ? met.genMET()->pt():0;
     float rawmetSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
     float t1met       = met.pt();
     float t1metPhi    = met.phi();
@@ -583,6 +585,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     // --- get pileup info 
     float nPU = 0;
     float nPUTrue = 0;
+
+    if(!isData_)
     for( auto & pu : *pileup)
     { 
 	if(pu.getBunchCrossing() == 0) 
@@ -600,7 +604,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     lumi_                    = iEvent.luminosityBlock();
     eventNum_                = iEvent.id().event();
     isData_                  = isData_; // has been filled upstream
-    genWeight_               = isData_ ? genEvtInfo->weight() : 0 ;
+    genWeight_               = !isData_ ? genEvtInfo->weight() : 0 ;
 
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
@@ -739,6 +743,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     HLT_pfmet_               = HLT_pfmet;
     HLT_pfmetCSV_            = HLT_pfmetCSV;
     
+/* 
+ * commenting out filters, until those are inside MiniAOD
     // code below was "borrowed" from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
     const edm::TriggerNames &fnames = iEvent.triggerNames(*filterBits);
     for (unsigned int i = 0, n = filterBits->size(); i < n; ++i) 
@@ -760,7 +766,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
       if(filterName=="Flag_trkPOG_toomanystripclus53X")             Flag_trkPOG_toomanystripclus53X_ = filterdecision;                        	 
       if(filterName=="Flag_hcalLaserEventFilter")	            Flag_hcalLaserEventFilter_ = filterdecision;                           	 
     }
-
+*/
     isDYTauTau_            = isDYTauTau_; // variable has been already initialized & previously set, shown here for completeness
 
     events_->Fill();
@@ -983,12 +989,14 @@ const reco::Candidate *SimpleROOT::getGenMother(const reco::Candidate* particle)
 }
 
 
-//miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
 float SimpleROOT::getPFIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,
                         const reco::Candidate* ptcl,  
                         float r_iso_min, float r_iso_max, float kt_scale,
                         bool use_pfweight, bool charged_only) {
 
+return -1; // function needs to be updated for 74X
+/*
+//miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
     if (ptcl->pt()<5.) return 99999.;
 
     float deadcone_nh(0.), deadcone_ch(0.), deadcone_ph(0.), deadcone_pu(0.);
@@ -1064,6 +1072,7 @@ float SimpleROOT::getPFIsolation(edm::Handle<pat::PackedCandidateCollection> pfc
     iso = iso/ptcl->pt();
 
     return iso;
+*/
   }
 
 //define this as a plug-in
