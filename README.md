@@ -8,8 +8,8 @@ of leptons, photons, jets and MET at the LHC.
 ssh username@lxplus.cern.ch  
 cd YourFavoriteDir  
 setenv SCRAM_ARCH slc6_amd64_gcc491  
-cmsrel CMSSW_7_3_2  
-cd CMSSW_7_3_2/src  
+cmsrel CMSSW_7_4_1  
+cd CMSSW_7_4_1/src  
 mkdir Tools  
 cd Tools/  
 git clone https://github.com/theofil/SimpleROOT.git  
