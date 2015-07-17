@@ -636,7 +636,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	jetEta_     [ii]  = ii < njets_ ? myJets[ii]->eta()   : 0;
 	jetPhi_     [ii]  = ii < njets_ ? myJets[ii]->phi()   : 0;
 	jetM_       [ii]  = ii < njets_ ? myJets[ii]->mass()  : 0;
-        jetBTag_    [ii]  = ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags") : 0;  // Phys14 0.679 nominal cut
+        jetBTag_    [ii]  = ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") : 0;  //  0.814 nominal cut
         jetGenPt_   [ii]  = ii < njets_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
     }
 
@@ -659,7 +659,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	rjetEta_     [ii]  = ii < nrjets_ ? myRJets[ii]->eta()   : 0;
 	rjetPhi_     [ii]  = ii < nrjets_ ? myRJets[ii]->phi()   : 0;
 	rjetM_       [ii]  = ii < nrjets_ ? myRJets[ii]->mass()  : 0;
-        rjetBTag_    [ii]  = ii < nrjets_ ? ((pat::Jet*) myRJets[ii])->bDiscriminator("combinedInclusiveSecondaryVertexV2BJetTags")  : 0;  // Phys14 0.679 nominal cut 
+        rjetBTag_    [ii]  = ii < nrjets_ ? ((pat::Jet*) myRJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags")  : 0;  // 0.814 nominal cut
     }
 
     ngenleps_                   = (unsigned short) myGenLeptons.size();
