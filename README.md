@@ -1,9 +1,11 @@
 # SimpleROOT
 
 This is a MiniAOD analyzer producing a flat ROOT TTree for CMS physics analysis,
-of leptons, photons, jets and MET at the LHC.
+of leptons, photons, jets and MET at the LHC. This specific release is for CMSSW_7_4_1
+and MiniAOD v1, is not further maintained.
 
 <h4> How to install this at CERN:  </h4>
+
 
 ssh username@lxplus.cern.ch  
 cd YourFavoriteDir  
