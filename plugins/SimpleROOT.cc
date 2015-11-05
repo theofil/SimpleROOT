@@ -86,6 +86,7 @@ class SimpleROOT : public edm::EDAnalyzer {
    	edm::Handle<pat::MuonCollection> muons;
      	edm::Handle<pat::ElectronCollection> electrons;
         edm::Handle<pat::JetCollection> jets;
+        edm::Handle<pat::METCollection> nakepfmets;
         edm::Handle<pat::METCollection> mets;
         edm::Handle<pat::PhotonCollection> photons;
         edm::Handle<double> rhoH;
@@ -106,6 +107,7 @@ class SimpleROOT : public edm::EDAnalyzer {
    	edm::EDGetTokenT<pat::MuonCollection> muonsToken;
      	edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
         edm::EDGetTokenT<pat::JetCollection> jetsToken;
+        edm::EDGetTokenT<pat::METCollection> nakepfmetsToken;
         edm::EDGetTokenT<pat::METCollection> metsToken;
         edm::EDGetTokenT<pat::PhotonCollection> photonsToken;
         edm::EDGetTokenT<double> rhoHToken;
@@ -184,6 +186,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         int   genlepMID_                  [ngenlepsMax]; // mother 
         int   genlepGMID_                 [ngenlepsMax]; // grand mother
         int   genlepGGMID_                [ngenlepsMax]; // grand grand mother
+        bool  genlepIsPrompt_             [ngenlepsMax]; // rivet safe prompt flag
 
         float genl1l2DPhi_;
         float genl1l2DR_;
@@ -203,7 +206,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         short genpartDRMI1_                [ngenpartsMax]; // daugther reco match index (genleptons to leptons, genjet to jet)
         short genpartDRMI2_                [ngenpartsMax]; // daugther reco match index 
 
-        float met_;          // raw pf-met
+        float nakepfmet_;          
+        float met_;          
         float metPhi_;
         float t1met_;
         float t1metPhi_;
@@ -254,7 +258,8 @@ verticesToken(consumes<reco::VertexCollection>(iConfig.getUntrackedParameter("of
 muonsToken(consumes<pat::MuonCollection>(iConfig.getUntrackedParameter("slimmedMuons",edm::InputTag("slimmedMuons")))),
 electronsToken(consumes<pat::ElectronCollection>(iConfig.getUntrackedParameter("slimmedElectrons",edm::InputTag("slimmedElectrons")))),
 jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJetsPuppi",edm::InputTag("slimmedJetsPuppi")))),
-metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
+nakepfmetsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
+metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETsPuppi",edm::InputTag("slimmedMETsPuppi")))),
 photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slimmedPhotons",edm::InputTag("slimmedPhotons")))),
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("slimmedAddPileupInfo", edm::InputTag("slimmedAddPileupInfo")))),  
@@ -328,7 +333,7 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("genlepID"         ,genlepID_               ,"genlepID[ngenleps]/S");
     events_->Branch("genlepMID"        ,genlepMID_              ,"genlepMID[ngenleps]/I");
     events_->Branch("genlepGMID"       ,genlepGMID_             ,"genlepGMID[ngenleps]/I");
-    events_->Branch("genlepGGMID"      ,genlepGGMID_            ,"genlepGGMID[ngenleps]/I");
+    events_->Branch("genlepIsPrompt"   ,genlepIsPrompt_         ,"genlepIsPrompt[ngenleps]/O");
 
     events_->Branch("genl1l2M"         ,&genl1l2M_              ,"genl1l2M/F");
     events_->Branch("genl1l2Pt"        ,&genl1l2Pt_             ,"genl1l2Pt/F");
@@ -338,6 +343,7 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("genl1l2DR"        ,&genl1l2DR_             ,"genl1l2DR/F");
 
     events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
+    events_->Branch("nakepfmet"        ,&nakepfmet_             ,"nakepfmet/F");
     events_->Branch("met"              ,&met_                   ,"met/F");
     events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F");
     events_->Branch("genmet"           ,&genmet_                ,"genmet/F");
@@ -405,6 +411,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(muonsToken, muons);
     iEvent.getByToken(electronsToken, electrons);
     iEvent.getByToken(jetsToken, jets);
+    iEvent.getByToken(nakepfmetsToken, nakepfmets);
     iEvent.getByToken(metsToken, mets);
     iEvent.getByToken(photonsToken, photons);
     iEvent.getByToken(rhoHToken, rhoH);
@@ -543,7 +550,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         int status = genParticle.status();
         int nod    = genParticle.numberOfDaughters();
 
-
         if(pt > 10 && fabs(eta) < 2.4 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); 
 	if(pt > 5 && (abs(ID) == 15) && !isDYTauTau_ && getGenMother(&genParticle)->pdgId() == 23)isDYTauTau_ = true;
  
@@ -553,6 +559,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
             myGenParticles.push_back(&genParticle);
 	}
     }
+    const pat::MET &nakepfmet = nakepfmets->front();
+    float rawnakepfmet        = nakepfmet.uncorPt();
 
     const pat::MET &met = mets->front();
     float rawmet      = met.uncorPt();
@@ -679,14 +687,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     ngenleps_                   = (unsigned short) myGenLeptons.size();
     for(int ii = 0 ; ii < ngenlepsMax; ii++) 
     {
-       	genlepPt_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                                    : 0;
-	genlepEta_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                                   : 0;
-	genlepPhi_     [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                                   : 0;
-	genlepM_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                                  : 0;
-        genlepID_      [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                                 : 0;
-        genlepMID_     [ii]  = ii < ngenleps_ ? (int)getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
-        genlepGMID_    [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
-        genlepGGMID_   [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(getGenMother(myGenLeptons[ii])))->pdgId()  : 0;
+       	genlepPt_        [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                                    : 0;
+	genlepEta_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                                   : 0;
+	genlepPhi_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                                   : 0;
+	genlepM_         [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                                  : 0;
+        genlepID_        [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                                 : 0;
+        genlepMID_       [ii]  = ii < ngenleps_ ? (int)getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
+        genlepGMID_      [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
+        genlepGGMID_     [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(getGenMother(myGenLeptons[ii])))->pdgId()  : 0;
+        genlepIsPrompt_  [ii]  = ii < ngenleps_ ? ((reco::GenParticle*)myGenLeptons[ii])->isPromptFinalState() 	            : 0;
     }
 
     ngenparts_                 = (unsigned short) myGenParticles.size();
@@ -733,6 +742,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     nphos_                   = (unsigned short) myPhotons.size();
     
+    nakepfmet_               = rawnakepfmet;          
     met_                     = rawmet;          
     metPhi_                  = rawmetPhi;
     genmet_                  = genmet;          
@@ -759,9 +769,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     HLT_mu1_                 = HLT_mu1;
     HLT_ZeroBias_            = HLT_ZeroBias;
     
-/* 
- * commenting out filters, until those are inside MiniAOD
-    // code below was "borrowed" from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
     const edm::TriggerNames &fnames = iEvent.triggerNames(*filterBits);
     for (unsigned int i = 0, n = filterBits->size(); i < n; ++i) 
     {
@@ -782,7 +789,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
       if(filterName=="Flag_trkPOG_toomanystripclus53X")             Flag_trkPOG_toomanystripclus53X_ = filterdecision;                        	 
       if(filterName=="Flag_hcalLaserEventFilter")	            Flag_hcalLaserEventFilter_ = filterdecision;                           	 
     }
-*/
+
     isDYTauTau_            = isDYTauTau_; // variable has been already initialized & previously set, shown here for completeness
 
     events_->Fill();
@@ -816,7 +823,6 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
    
     // --- isolation --- those not used are commented out
     if(res && LeptonRelIso((reco::Candidate*)&mu) > 0.15) res = false;
-//    if(getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&mu), 0.05, 0.2, 10., false, false) > 0.15) res = false; // miniISO
 
     return res;
 }
@@ -973,7 +979,6 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
 
     // --- isolation -- those not used are commented out
     if(res && LeptonRelIso((reco::Candidate*)&el) > 0.15)res = false;
-//    if(res && getPFIsolation(pfcands, dynamic_cast<const reco::Candidate *>(&el), 0.05, 0.2, 10., false, false) > 0.15)res = false;  //miniISO
 
     return res;
 }
@@ -1004,92 +1009,6 @@ const reco::Candidate *SimpleROOT::getGenMother(const reco::Candidate* particle)
   return particle->pdgId() != particle->mother(0)->pdgId() ? particle->mother(0): getGenMother(particle->mother(0));
 }
 
-
-float SimpleROOT::getPFIsolation(edm::Handle<pat::PackedCandidateCollection> pfcands,
-                        const reco::Candidate* ptcl,  
-                        float r_iso_min, float r_iso_max, float kt_scale,
-                        bool use_pfweight, bool charged_only) {
-
-return -1; // function needs to be updated for 74X
-/*
-//miniISO from https://github.com/manuelfs/CfANtupler/blob/master/minicfa/interface/miniAdHocNTupler.h
-    if (ptcl->pt()<5.) return 99999.;
-
-    float deadcone_nh(0.), deadcone_ch(0.), deadcone_ph(0.), deadcone_pu(0.);
-    if(ptcl->isElectron()) {
-      if (fabs(ptcl->eta())>1.479) {deadcone_ch = 0.015; deadcone_pu = 0.015; deadcone_ph = 0.08;}
-    } else if(ptcl->isMuon()) {
-      deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01;  
-    } else {
-      //deadcone_ch = 0.0001; deadcone_pu = 0.01; deadcone_ph = 0.01;deadcone_nh = 0.01; // maybe use muon cones??
-    }
-
-    float iso_nh(0.); float iso_ch(0.); 
-    float iso_ph(0.); float iso_pu(0.);
-    float ptThresh(0.5);
-    if(ptcl->isElectron()) ptThresh = 0;
-    float r_iso = max(r_iso_min,min(r_iso_max, kt_scale/ptcl->pt()));
-    for (const pat::PackedCandidate &pfc : *pfcands) {
-      if (abs(pfc.pdgId())<7) continue;
-
-      float dr = deltaR(pfc, *ptcl);
-      if (dr > r_iso) continue;
-      
-      //////////////////  NEUTRALS  /////////////////////////
-      if (pfc.charge()==0){
-        if (pfc.pt()>ptThresh) {
-          float wpf(1.);
-          if (use_pfweight){
-            float wpv(0.), wpu(0.);
-            for (const pat::PackedCandidate &jpfc : *pfcands) {
-              float jdr = deltaR(pfc, jpfc);
-              if (pfc.charge()!=0 || jdr<0.00001) continue;
-              float jpt = jpfc.pt();
-              if (pfc.fromPV()>1) wpv *= jpt/jdr;
-              else wpu *= jpt/jdr;
-            }
-            wpv = log(wpv);
-            wpu = log(wpu);
-            wpf = wpv/(wpv+wpu);
-          }
-          /////////// PHOTONS ////////////
-          if (abs(pfc.pdgId())==22) {
-            if(dr < deadcone_ph) continue;
-            iso_ph += wpf*pfc.pt();
-	    /////////// NEUTRAL HADRONS ////////////
-          } else if (abs(pfc.pdgId())==130) {
-            if(dr < deadcone_nh) continue;
-            iso_nh += wpf*pfc.pt();
-          }
-        }
-        //////////////////  CHARGED from PV  /////////////////////////
-      } else if (pfc.fromPV()>1){
-        if (abs(pfc.pdgId())==211) {
-          if(dr < deadcone_ch) continue;
-          iso_ch += pfc.pt();
-        }
-        //////////////////  CHARGED from PU  /////////////////////////
-      } else {
-        if (pfc.pt()>ptThresh){
-          if(dr < deadcone_pu) continue;
-          iso_pu += pfc.pt();
-        }
-      }
-    }
-    float iso(0.);
-    if (charged_only){
-      iso = iso_ch;
-    } else {
-      iso = iso_ph + iso_nh;
-      if (!use_pfweight) iso -= 0.5*iso_pu;
-      if (iso>0) iso += iso_ch;
-      else iso = iso_ch;
-    }
-    iso = iso/ptcl->pt();
-
-    return iso;
-*/
-  }
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(SimpleROOT);
