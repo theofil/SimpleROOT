@@ -130,7 +130,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 	bool goodVtx_; 
 	unsigned short nVtx_; 
 
-        unsigned long eventNum_;
+        ULong64_t eventNum_;
         unsigned int runNum_;
         unsigned int lumi_;
         float genWeight_;
@@ -224,7 +224,9 @@ class SimpleROOT : public edm::EDAnalyzer {
 	unsigned short HLT_mu1e2_; 
 	unsigned short HLT_e1mu2_; 
 	unsigned short HLT_pfmet_; 
-	unsigned short HLT_pfmetCSV_; 
+	unsigned short HLT_e1_; 
+	unsigned short HLT_mu1_; 
+	unsigned short HLT_ZeroBias_; 
        
 	bool Flag_trackingFailureFilter_;		        
 	bool Flag_goodVertices_;			 
@@ -251,11 +253,11 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig):  // initialize tokens 
 verticesToken(consumes<reco::VertexCollection>(iConfig.getUntrackedParameter("offlineSlimmedPrimaryVertices", edm::InputTag("offlineSlimmedPrimaryVertices")))),
 muonsToken(consumes<pat::MuonCollection>(iConfig.getUntrackedParameter("slimmedMuons",edm::InputTag("slimmedMuons")))),
 electronsToken(consumes<pat::ElectronCollection>(iConfig.getUntrackedParameter("slimmedElectrons",edm::InputTag("slimmedElectrons")))),
-jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJets",edm::InputTag("slimmedJets")))),
+jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJetsPuppi",edm::InputTag("slimmedJetsPuppi")))),
 metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
 photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slimmedPhotons",edm::InputTag("slimmedPhotons")))),
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
-pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("addPileupInfo", edm::InputTag("addPileupInfo")))),  
+pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("slimmedAddPileupInfo", edm::InputTag("slimmedAddPileupInfo")))),  
 prunedToken(consumes<edm::View<reco::GenParticle> >(iConfig.getUntrackedParameter("prunedGenParticles", edm::InputTag("prunedGenParticles")))),
 packedToken(consumes<edm::View<pat::PackedGenParticle> >(edm::InputTag("packedGenParticles"))),
 pfcandsToken(consumes<pat::PackedCandidateCollection> (iConfig.getUntrackedParameter("packedPFCandidates", edm::InputTag("packedPFCandidates")))),
@@ -357,7 +359,9 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/s");
     events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/s");
     events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/s");
-    events_->Branch("HLT_pfmetCSV"     ,&HLT_pfmetCSV_          ,"HLT_pfmetCSV/s");
+    events_->Branch("HLT_e1"           ,&HLT_e1_                ,"HLT_e1/s");
+    events_->Branch("HLT_mu1"          ,&HLT_mu1_               ,"HLT_mu1/s");
+    events_->Branch("HLT_ZeroBias"     ,&HLT_ZeroBias_          ,"HLT_ZeroBias/s");
 
     events_->Branch("Flag_trackingFailureFilter"                   ,&Flag_trackingFailureFilter_	                ,"Flag_trackingFailureFilter/O");
     events_->Branch("Flag_goodVertices"                            ,&Flag_goodVertices_			                ,"Flag_goodVertices/O");
@@ -437,7 +441,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     unsigned short HLT_mu1e2    = 0;
     unsigned short HLT_e1mu2    = 0;
     unsigned short HLT_pfmet    = 0;
-    unsigned short HLT_pfmetCSV = 0;
+    unsigned short HLT_e1       = 0;
+    unsigned short HLT_mu1      = 0;
+    unsigned short HLT_ZeroBias = 0;
 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) 
@@ -450,7 +456,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v")    && triggerBits->accept(i)) HLT_mu1e2    = triggerPrescales->getPrescaleForIndex(i);  
         if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v")     && triggerBits->accept(i)) HLT_e1mu2    = triggerPrescales->getPrescaleForIndex(i); 
         if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                          && triggerBits->accept(i)) HLT_pfmet    = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_PFMET120_NoiseCleaned_BTagCSV0p72_v")              && triggerBits->accept(i)) HLT_pfmetCSV = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_Ele22_eta2p1_WPLoose_Gsf_v")                       && triggerBits->accept(i)) HLT_e1       = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_IsoMu17_eta2p1_v")                                 && triggerBits->accept(i)) HLT_mu1 = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_ZeroBias_v")                                       && triggerBits->accept(i)) HLT_ZeroBias = triggerPrescales->getPrescaleForIndex(i); 
     }
 
 
@@ -547,8 +555,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     }
 
     const pat::MET &met = mets->front();
-    float rawmet      = met.shiftedPt(pat::MET::NoShift, pat::MET::Raw);
-    float rawmetPhi   = met.shiftedPhi(pat::MET::NoShift, pat::MET::Raw);
+    float rawmet      = met.uncorPt();
+    float rawmetPhi   = met.uncorPhi();
     float genmet      = !isData_ ? met.genMET()->pt():0;
     float rawmetSumEt = met.shiftedSumEt(pat::MET::NoShift, pat::MET::Raw);
     float t1met       = met.pt();
@@ -747,7 +755,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     HLT_mu1e2_               = HLT_mu1e2;
     HLT_e1mu2_               = HLT_e1mu2;
     HLT_pfmet_               = HLT_pfmet;
-    HLT_pfmetCSV_            = HLT_pfmetCSV;
+    HLT_e1_                  = HLT_e1;
+    HLT_mu1_                 = HLT_mu1;
+    HLT_ZeroBias_            = HLT_ZeroBias;
     
 /* 
  * commenting out filters, until those are inside MiniAOD
