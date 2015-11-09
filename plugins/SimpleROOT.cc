@@ -601,7 +601,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     t1HTVector = -t1metVector -l1 -l2;
     
     for(auto &myjet : myJets)    jHTVector += P4(myjet);
-    for(auto &mylep : myLeptons) jHTVector -= P4(mylep);
  
     // --- get pileup info 
     float nPU = 0;
