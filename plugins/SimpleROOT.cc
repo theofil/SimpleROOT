@@ -810,7 +810,7 @@ bool SimpleROOT::isGoodJet(const pat::Jet &myJet)
 
 bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
 {
-    // --- https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideMuonId
+    // use https://twiki.cern.ch/twiki/bin/view/CMS/SWGuideMuonIdRun2#Tight_Muon
     bool res = true; // by default is good, unless fails a cut bellow
 
     if(mu.pt() < 10) res = false; 
@@ -875,22 +875,11 @@ short SimpleROOT::getMatchedIndex(const reco::Candidate * particleToBeMatched, v
 
 float SimpleROOT::MuonRelIso(const reco::Candidate *cand)
 {
-    float relIsoWithEA = 0.001;
-    pat::Muon mu = *((pat::Muon*)cand);  
-    // Effective areas from https://indico.cern.ch/event/367861/contribution/2/material/slides/0.pdf
-    const int nEtaBins = 5; 
-    const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-    const float effectiveAreaValues[nEtaBins] = {0.0913, 0.0765, 0.0546, 0.0728, 0.1177};
+    float relIso = 0.001;
+    pat::Muon *mu = ((pat::Muon*)cand);  
 
-    reco::MuonPFIsolation pfIso =  mu.pfIsolationR03();
-    // Find eta bin first. If eta>2.5, the last eta bin is used.
-    int etaBin = 0;
-    while(etaBin < nEtaBins-1 && abs(mu.eta()) > etaBinLimits[etaBin+1])  ++etaBin;
-
-    float area = effectiveAreaValues[etaBin];
-    relIsoWithEA = (float)( pfIso.sumChargedHadronPt + max(0.0, pfIso.sumNeutralHadronEt + pfIso.sumPhotonEt - (*rhoH) * area ) )/mu.pt();
-
-    return relIsoWithEA;
+    relIso = (mu->pfIsolationR04().sumChargedHadronPt + max(0., mu->pfIsolationR04().sumNeutralHadronEt + mu->pfIsolationR04().sumPhotonEt - 0.5*mu->pfIsolationR04().sumPUPt))/mu->pt();
+    return relIso;
 }
 
 
