@@ -73,7 +73,6 @@ class SimpleROOT : public edm::EDAnalyzer {
         float LeptonRelIso(const reco::Candidate *cand){return cand->isElectron() ? ElectronRelIso(cand) : MuonRelIso(cand);}
         bool  isGoodLepton(const reco::Candidate *cand){return cand->isElectron() ? isGoodElectron(*((pat::Electron*)cand)) : isGoodMuon(*((pat::Muon*)cand));}
   
-        float PtRel(const reco::Candidate * myLepton, vector<const reco::Candidate *> myJets);
         short getMatchedIndex(const reco::Candidate *, vector<const reco::Candidate *>);
         bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
         const reco::Candidate *getGenMother(const reco::Candidate*); 
@@ -86,7 +85,7 @@ class SimpleROOT : public edm::EDAnalyzer {
    	edm::Handle<pat::MuonCollection> muons;
      	edm::Handle<pat::ElectronCollection> electrons;
         edm::Handle<pat::JetCollection> jets;
-        edm::Handle<pat::METCollection> nakepfmets;
+        edm::Handle<pat::METCollection> puppimets;
         edm::Handle<pat::METCollection> mets;
         edm::Handle<pat::PhotonCollection> photons;
         edm::Handle<double> rhoH;
@@ -107,7 +106,7 @@ class SimpleROOT : public edm::EDAnalyzer {
    	edm::EDGetTokenT<pat::MuonCollection> muonsToken;
      	edm::EDGetTokenT<pat::ElectronCollection> electronsToken;
         edm::EDGetTokenT<pat::JetCollection> jetsToken;
-        edm::EDGetTokenT<pat::METCollection> nakepfmetsToken;
+        edm::EDGetTokenT<pat::METCollection> puppimetsToken;
         edm::EDGetTokenT<pat::METCollection> metsToken;
         edm::EDGetTokenT<pat::PhotonCollection> photonsToken;
         edm::EDGetTokenT<double> rhoHToken;
@@ -150,7 +149,6 @@ class SimpleROOT : public edm::EDAnalyzer {
         float lepPhi_                     [nlepsMax]; 
         float lepM_                       [nlepsMax];   
         float lepIso_                     [nlepsMax];
-        float lepPtRel_                   [nlepsMax];
         short lepID_                      [nlepsMax];
         short lepGenMatchIndex_           [nlepsMax];   // index in the stored genLep[] collection
         bool  lepTriggerMatch_            [nlepsMax];
@@ -206,7 +204,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         short genpartDRMI1_                [ngenpartsMax]; // daugther reco match index (genleptons to leptons, genjet to jet)
         short genpartDRMI2_                [ngenpartsMax]; // daugther reco match index 
 
-        float nakepfmet_;          
+        float puppimet_;          
         float met_;          
         float metPhi_;
         float t1met_;
@@ -257,9 +255,9 @@ SimpleROOT::SimpleROOT(const edm::ParameterSet& iConfig):  // initialize tokens 
 verticesToken(consumes<reco::VertexCollection>(iConfig.getUntrackedParameter("offlineSlimmedPrimaryVertices", edm::InputTag("offlineSlimmedPrimaryVertices")))),
 muonsToken(consumes<pat::MuonCollection>(iConfig.getUntrackedParameter("slimmedMuons",edm::InputTag("slimmedMuons")))),
 electronsToken(consumes<pat::ElectronCollection>(iConfig.getUntrackedParameter("slimmedElectrons",edm::InputTag("slimmedElectrons")))),
-jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJetsPuppi",edm::InputTag("slimmedJetsPuppi")))),
-nakepfmetsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
-metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETsPuppi",edm::InputTag("slimmedMETsPuppi")))),
+jetsToken(consumes<pat::JetCollection>(iConfig.getUntrackedParameter("slimmedJets",edm::InputTag("slimmedJets")))),
+puppimetsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETsPuppi",edm::InputTag("slimmedMETsPuppi")))),
+metsToken(consumes<pat::METCollection>(iConfig.getUntrackedParameter("slimmedMETs",edm::InputTag("slimmedMETs")))),
 photonsToken(consumes<pat::PhotonCollection>(iConfig.getUntrackedParameter("slimmedPhotons",edm::InputTag("slimmedPhotons")))),
 rhoHToken(consumes<double>(iConfig.getUntrackedParameter("fixedGridRhoFastjetAll",edm::InputTag("fixedGridRhoFastjetAll")))),
 pileupToken(consumes<edm::View<PileupSummaryInfo> >(iConfig.getUntrackedParameter("slimmedAddPileupInfo", edm::InputTag("slimmedAddPileupInfo")))),  
@@ -298,7 +296,6 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("lepPhi"           ,lepPhi_                 ,"lepPhi[nleps]/F");
     events_->Branch("lepM"             ,lepM_                   ,"lepM[nleps]/F");
     events_->Branch("lepIso"           ,lepIso_                 ,"lepIso[nleps]/F");
-    events_->Branch("lepPtRel"         ,lepPtRel_               ,"lepPtRel[nleps]/F");
     events_->Branch("lepID"            ,lepID_                  ,"lepID[nleps]/S");
     events_->Branch("lepGenMatchIndex" ,lepGenMatchIndex_       ,"lepGenMatchIndex[nleps]/S");
     events_->Branch("lepTriggerMatch"  ,lepTriggerMatch_        ,"lepTriggerMatch[nleps]/O");
@@ -343,7 +340,7 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("genl1l2DR"        ,&genl1l2DR_             ,"genl1l2DR/F");
 
     events_->Branch("nphos"            ,&nphos_                 ,"nphos/s");
-    events_->Branch("nakepfmet"        ,&nakepfmet_             ,"nakepfmet/F");
+    events_->Branch("puppimet"         ,&puppimet_              ,"puppimet/F");
     events_->Branch("met"              ,&met_                   ,"met/F");
     events_->Branch("metPhi"           ,&metPhi_                ,"metPhi/F");
     events_->Branch("genmet"           ,&genmet_                ,"genmet/F");
@@ -411,7 +408,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     iEvent.getByToken(muonsToken, muons);
     iEvent.getByToken(electronsToken, electrons);
     iEvent.getByToken(jetsToken, jets);
-    iEvent.getByToken(nakepfmetsToken, nakepfmets);
+    iEvent.getByToken(puppimetsToken, puppimets);
     iEvent.getByToken(metsToken, mets);
     iEvent.getByToken(photonsToken, photons);
     iEvent.getByToken(rhoHToken, rhoH);
@@ -559,8 +556,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
             myGenParticles.push_back(&genParticle);
 	}
     }
-    const pat::MET &nakepfmet = nakepfmets->front();
-    float rawnakepfmet        = nakepfmet.uncorPt();
+    const pat::MET &puppimet = puppimets->front();
+    float rawpuppimet        = puppimet.uncorPt();
 
     const pat::MET &met = mets->front();
     float rawmet      = met.uncorPt();
@@ -637,7 +634,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	lepM_              [ii]  = ii < nleps_ ? myLeptons[ii]->mass()                                                 : 0;
         lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                                                : 0;
         lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0;  
-        lepPtRel_          [ii]  = ii < nleps_ ? PtRel(myLeptons[ii], myJets)                                          : 1.e+5;  
         lepGenMatchIndex_  [ii]  = ii < nleps_ ? getMatchedIndex(myLeptons[ii], myGenLeptons)                          : -1; //function returns -1 if not matched  
         lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
@@ -742,7 +738,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     nphos_                   = (unsigned short) myPhotons.size();
     
-    nakepfmet_               = rawnakepfmet;          
+    puppimet_               =  rawpuppimet;          
     met_                     = rawmet;          
     metPhi_                  = rawmetPhi;
     genmet_                  = genmet;          
@@ -820,7 +816,7 @@ bool SimpleROOT::isGoodMuon(const pat::Muon &mu)
     if(mu.pt() < 10) res = false; 
     if(fabs(mu.eta()) > 2.4) res = false;
     if(!mu.isTightMuon(vtx)) res = false;
-   
+
     // --- isolation --- those not used are commented out
     if(res && LeptonRelIso((reco::Candidate*)&mu) > 0.15) res = false;
 
@@ -902,10 +898,12 @@ float SimpleROOT::ElectronRelIso(const reco::Candidate *cand)
 {
     float relIsoWithEA = 0;
     pat::Electron el = *((pat::Electron*)cand);  
-    // Effective areas from https://indico.cern.ch/event/367861/contribution/2/material/slides/0.pdf
-    const int nEtaBins = 5; 
-    const float etaBinLimits[nEtaBins+1] = {0.0, 0.8, 1.3, 2.0, 2.2, 2.5};
-    const float effectiveAreaValues[nEtaBins] = {0.1013, 0.0988, 0.0572, 0.0842, 0.1530};
+    // https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Spring15_selection_25ns
+    // https://indico.cern.ch/event/370507/contribution/1/attachments/1140657/1633761/Rami_eleCB_ID_25ns.pdf
+    // Effective areas from https://indico.cern.ch/event/369239/contribution/4/attachments/1134761/1623262/talk_effective_areas_25ns.pdf
+    const int nEtaBins = 7; 
+    const float etaBinLimits[nEtaBins+1] = {0.0, 1.0, 1.479, 2.0, 2.2, 2.3, 2.4, 2.5};
+    const float effectiveAreaValues[nEtaBins] = {0.1752 , 0.1862, 0.1411, 0.1534 , 0.1903, 0.2243, 0.2687};
 
     reco::GsfElectron::PflowIsolationVariables pfIso = el.pfIsolationVariables();
     float etaSC = el.superCluster()->eta();
@@ -933,9 +931,7 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
     bool isEE      = fabs(el.superCluster()->eta()) > 1.5660 ? 1 : 0;
     if(res) 
     {
-        // --- https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#PHYS14_selection_all_conditions  (v13)
-        // --- https://indico.cern.ch/event/292938/  {Loose ID w/o isolation | Phys14}
-        // --- http://cmslxr.fnal.gov/source/DataFormats/EgammaCandidates/interface/GsfElectron.h?v=CMSSW_7_3_2
+        // --- using the EGM loose id for Spring 15 (25 ns): https://twiki.cern.ch/twiki/bin/view/CMS/CutBasedElectronIdentificationRun2#Spring15_selection_25ns
         float  trackMomentumAtVtx               = (float)sqrt(el.trackMomentumAtVtx().mag2());
         float  ecalEnergy                       = (float)el.ecalEnergy();
     
@@ -951,51 +947,39 @@ bool SimpleROOT::isGoodElectron(const pat::Electron &el)
     
         if(isEB)
         {
-    	    if(res && full5x5_sigmaIetaIeta         >  0.010557)res=false;    
-	    if(res && fabs(dEtaIn)                  >  0.012442)res=false;                   
-            if(res && fabs(dPhiIn)                  >  0.072624)res=false;                   
-            if(res && HoE                           >  0.121476)res=false; 
-            if(res && ooEmooP                       >  0.221803)res=false; 
-            if(res && fabs(d0)                      >  0.022664)res=false; 
-            if(res && fabs(dz)                      >  0.173670)res=false; 
-            if(res && expectedMissingInnerHits      >= 2       )res=false;
-            if(res && passConversionVeto            == false   )res=false;
+    	    if(res && full5x5_sigmaIetaIeta               >  0.0103 )res=false;    
+	    if(res && fabs(dEtaIn)                        >  0.0105 )res=false;                   
+            if(res && fabs(dPhiIn)                        >  0.115  )res=false;                   
+            if(res && HoE                                 >  0.104  )res=false; 
+            if(res && LeptonRelIso((reco::Candidate*)&el) >  0.0893 )res=false;
+            if(res && ooEmooP                             >  0.102  )res=false; 
+            if(res && fabs(d0)                            >  0.0261 )res=false; 
+            if(res && fabs(dz)                            >  0.41   )res=false; 
+            if(res && expectedMissingInnerHits            >  2      )res=false;
+            if(res && passConversionVeto                  == false  )res=false;
 	}
 
         if(isEE)
         {
-    	    if(res && full5x5_sigmaIetaIeta         >  0.032602)res=false;    
-	    if(res && fabs(dEtaIn)                  >  0.010654)res=false;                   
-            if(res && fabs(dPhiIn)                  >  0.145129)res=false;                   
-            if(res && HoE                           >  0.131862)res=false; 
-            if(res && ooEmooP                       >  0.142283)res=false; 
-            if(res && fabs(d0)                      >  0.097358)res=false; 
-            if(res && fabs(dz)                      >  0.198444)res=false; 
-            if(res && expectedMissingInnerHits      >= 2       )res=false;
-            if(res && passConversionVeto            == false   )res=false;
+    	    if(res && full5x5_sigmaIetaIeta               >  0.0301  )res=false;    
+	    if(res && fabs(dEtaIn)                        >  0.00814 )res=false;                   
+            if(res && fabs(dPhiIn)                        >  0.182   )res=false;                   
+            if(res && HoE                                 >  0.0897  )res=false; 
+            if(res && LeptonRelIso((reco::Candidate*)&el) >  0.121   )res=false;
+            if(res && ooEmooP                             >  0.126   )res=false; 
+            if(res && fabs(d0)                            >  0.118   )res=false; 
+            if(res && fabs(dz)                            >  0.822   )res=false; 
+            if(res && expectedMissingInnerHits            >  1       )res=false;
+            if(res && passConversionVeto                  == false   )res=false;
         }
     }
 
-
-    // --- isolation -- those not used are commented out
-    if(res && LeptonRelIso((reco::Candidate*)&el) > 0.15)res = false;
+    // --- isolation -- commented out cause is part of Spring15 WP
+    //if(res && LeptonRelIso((reco::Candidate*)&el) > 0.15)res = false;
 
     return res;
 }
 
-float SimpleROOT::PtRel(const reco::Candidate *myLepton, vector<const reco::Candidate *> myJets)
-{
-    float myPtRel = 1.e+5;
-    for(auto & myJet: myJets)
-    {
-	float ptrel = P4(myLepton).Perp(P4(myJet).Vect());
-	myPtRel = ptrel < myPtRel ? ptrel : myPtRel;
-    }
-
-    if(myJets.size() == 0) myPtRel = 0;
-
-    return myPtRel;
-}
 
 bool SimpleROOT::isGoodVertex(const reco::Vertex &vtx)
 {
