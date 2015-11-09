@@ -223,6 +223,7 @@ class SimpleROOT : public edm::EDAnalyzer {
 
 	unsigned short HLT_e1e2_;   // 0 if not fired, otherwise store the prescale (should be 1 for unprescaled paths) 
 	unsigned short HLT_mu1mu2_; 
+	unsigned short HLT_mu1mu2TkMu8_; 
 	unsigned short HLT_mu1e2_; 
 	unsigned short HLT_e1mu2_; 
 	unsigned short HLT_pfmet_; 
@@ -359,6 +360,7 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
 
     events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/s");
     events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/s");
+    events_->Branch("HLT_mu1mu2TkMu8"  ,&HLT_mu1mu2TkMu8_       ,"HLT_mu1mu2TkMu8/s");
     events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/s");
     events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/s");
     events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/s");
@@ -440,14 +442,15 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<TLorentzVector >hltL3MuonCandidates;
 
     // --- trigger info
-    unsigned short HLT_e1e2     = 0;
-    unsigned short HLT_mu1mu2   = 0;
-    unsigned short HLT_mu1e2    = 0;
-    unsigned short HLT_e1mu2    = 0;
-    unsigned short HLT_pfmet    = 0;
-    unsigned short HLT_e1       = 0;
-    unsigned short HLT_mu1      = 0;
-    unsigned short HLT_ZeroBias = 0;
+    unsigned short HLT_e1e2          = 0;
+    unsigned short HLT_mu1mu2        = 0;
+    unsigned short HLT_mu1mu2TkMu8   = 0;
+    unsigned short HLT_mu1e2         = 0;
+    unsigned short HLT_e1mu2         = 0;
+    unsigned short HLT_pfmet         = 0;
+    unsigned short HLT_e1            = 0;
+    unsigned short HLT_mu1           = 0;
+    unsigned short HLT_ZeroBias      = 0;
 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) 
@@ -455,19 +458,21 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	string trigger_name = string(names.triggerName(i));
         trigger_name.pop_back();
 
-        if(trigger_name == string("HLT_Ele17_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v")          && triggerBits->accept(i)) HLT_e1e2     = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v")                && triggerBits->accept(i)) HLT_mu1mu2   = triggerPrescales->getPrescaleForIndex(i);
-        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v")    && triggerBits->accept(i)) HLT_mu1e2    = triggerPrescales->getPrescaleForIndex(i);  
-        if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v")     && triggerBits->accept(i)) HLT_e1mu2    = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                          && triggerBits->accept(i)) HLT_pfmet    = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_Ele22_eta2p1_WPLoose_Gsf_v")                       && triggerBits->accept(i)) HLT_e1       = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_IsoMu17_eta2p1_v")                                 && triggerBits->accept(i)) HLT_mu1 = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_ZeroBias_v")                                       && triggerBits->accept(i)) HLT_ZeroBias = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_Ele17_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v")          && triggerBits->accept(i)) HLT_e1e2         = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v")                && triggerBits->accept(i)) HLT_mu1mu2       = triggerPrescales->getPrescaleForIndex(i);
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v")              && triggerBits->accept(i)) HLT_mu1mu2TkMu8  = triggerPrescales->getPrescaleForIndex(i);
+        if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v")    && triggerBits->accept(i)) HLT_mu1e2        = triggerPrescales->getPrescaleForIndex(i);  
+        if(trigger_name == string("HLT_Mu8_TrkIsoVVL_Ele17_CaloIdL_TrackIdL_IsoVL_v")     && triggerBits->accept(i)) HLT_e1mu2        = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                          && triggerBits->accept(i)) HLT_pfmet        = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_Ele22_eta2p1_WPLoose_Gsf_v")                       && triggerBits->accept(i)) HLT_e1           = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_IsoMu20_v")                                        && triggerBits->accept(i)) HLT_mu1          = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_IsoTkMu20_v")                                      && triggerBits->accept(i)) HLT_mu1          = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_ZeroBias_v")                                       && triggerBits->accept(i)) HLT_ZeroBias     = triggerPrescales->getPrescaleForIndex(i); 
     }
 
 
    // --- store HLT trigger objects for offline matching
-   if(HLT_e1e2 !=0 || HLT_mu1mu2 !=0 || HLT_mu1e2 !=0 || HLT_e1mu2 !=0)
+   if(HLT_e1e2 !=0 || HLT_mu1mu2 !=0 || HLT_mu1e2 !=0 || HLT_e1mu2 !=0 || HLT_mu1mu2TkMu8 !=0)
    {
 	for (pat::TriggerObjectStandAlone obj : *triggerObjects) 
 	{
