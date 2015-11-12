@@ -77,7 +77,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         bool  triggerMatch(const reco::Candidate *, const std::vector<TLorentzVector> &, const std::vector<TLorentzVector> &);
         const reco::Candidate *getGenMother(const reco::Candidate*); 
        
-        float getPFIsolation(edm::Handle<pat::PackedCandidateCollection>, const reco::Candidate*, float, float, float, bool, bool); // miniISO 
+        float coolme(float x, float b){return round(x/b)*b;} // foster passive ROOT compression by rounding x to precision b
 
         TLorentzVector P4(const reco::Candidate* cand){TLorentzVector p4vec; p4vec.SetPxPyPzE( cand->px(), cand->py(), cand->pz(), cand->energy() ); return p4vec;}
 
@@ -662,22 +662,22 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     nleps_                   = (unsigned short) myLeptons.size();
     for(int ii = 0 ; ii < nlepsMax; ii++) 
     {
-       	lepPt_             [ii]  = ii < nleps_ ? myLeptons[ii]->pt()                                                   : 0;
-	lepEta_            [ii]  = ii < nleps_ ? myLeptons[ii]->eta()                                                  : 0;
-	lepPhi_            [ii]  = ii < nleps_ ? myLeptons[ii]->phi()                                                  : 0;
-	lepM_              [ii]  = ii < nleps_ ? myLeptons[ii]->mass()                                                 : 0;
+       	lepPt_             [ii]  = coolme(ii < nleps_ ? myLeptons[ii]->pt()                                                   : 0,   0.50);
+	lepEta_            [ii]  = coolme(ii < nleps_ ? myLeptons[ii]->eta()                                                  : 0,   0.05);
+	lepPhi_            [ii]  = coolme(ii < nleps_ ? myLeptons[ii]->phi()                                                  : 0,   0.05);
+	lepM_              [ii]  = coolme(ii < nleps_ ? myLeptons[ii]->mass()                                                 : 0,   0.05);
         lepID_             [ii]  = ii < nleps_ ? myLeptons[ii]->pdgId()                                                : 0;
-        lepIso_            [ii]  = ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0;  
+        lepIso_            [ii]  = coolme(ii < nleps_ ? LeptonRelIso(myLeptons[ii])                                           : 0,   0.01);  
         lepGenMatchIndex_  [ii]  = ii < nleps_ ? getMatchedIndex(myLeptons[ii], myGenLeptons)                          : -1; //function returns -1 if not matched  
         lepTriggerMatch_   [ii]  = ii < nleps_ ? triggerMatch(myLeptons[ii], hltEgammaCandidates, hltL3MuonCandidates) : 0; // match lepton either to egamma or to muon
     }
     
-    l1l2DPhi_                = nleps_>=2 ? l1.DeltaPhi(l2) : 0;
-    l1l2DR_                  = nleps_>=2 ? l1.DeltaR(l2) : 0;
-    l1l2Pt_                  = nleps_>=2 ? (l1+l2).Pt() : 0;
-    l1l2M_                   = nleps_>=2 ? (l1+l2).M() : 0;
-    l1l2Eta_                 = nleps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0;
-    l1l2Phi_                 = nleps_>=2 ? (l1+l2).Phi() : 0;
+    l1l2DPhi_                = coolme(nleps_>=2 ? l1.DeltaPhi(l2) : 0,   0.05);
+    l1l2DR_                  = coolme(nleps_>=2 ? l1.DeltaR(l2)   : 0,   0.05);
+    l1l2Pt_                  = coolme(nleps_>=2 ? (l1+l2).Pt()    : 0,   0.50);
+    l1l2M_                   = coolme(nleps_>=2 ? (l1+l2).M()     : 0,   0.50);  
+    l1l2Eta_                 = coolme(nleps_>=2 && l1l2Pt_ > 1.e-3 ? (l1+l2).Eta() : 0,   0.05);
+    l1l2Phi_                 = coolme(nleps_>=2 ? (l1+l2).Phi()   : 0,   0.05);
 
     njets_                   = (unsigned short) myJets.size();
 
@@ -685,12 +685,12 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     {
         int genjetMatchedIndex = ii < njets_ ? getMatchedIndex(myJets[ii], myGenJets): -1;
 
-       	jetPt_      [ii]  = ii < njets_ ? myJets[ii]->pt()    : 0;
-	jetEta_     [ii]  = ii < njets_ ? myJets[ii]->eta()   : 0;
-	jetPhi_     [ii]  = ii < njets_ ? myJets[ii]->phi()   : 0;
-	jetM_       [ii]  = ii < njets_ ? myJets[ii]->mass()  : 0;
-        jetBTag_    [ii]  = ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") : 0;  //  0.814 nominal cut
-        jetGenPt_   [ii]  = ii < njets_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
+       	jetPt_      [ii]  = coolme(ii < njets_ ? myJets[ii]->pt()    : 0,   1.00);
+	jetEta_     [ii]  = coolme(ii < njets_ ? myJets[ii]->eta()   : 0,   0.05);
+	jetPhi_     [ii]  = coolme(ii < njets_ ? myJets[ii]->phi()   : 0,   0.05);
+	jetM_       [ii]  = coolme(ii < njets_ ? myJets[ii]->mass()  : 0,   0.10);
+        jetBTag_    [ii]  = coolme(ii < njets_ ? ((pat::Jet*) myJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags") : 0,   0.001);  //  0.814 nominal cut
+        jetGenPt_   [ii]  = coolme(ii < njets_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0,   1.00);  
     }
 
     njetsFW_                   = (unsigned short) myJetsFW.size();
@@ -698,30 +698,30 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     {
         int genjetMatchedIndex = ii < njetsFW_ ? getMatchedIndex(myJetsFW[ii], myGenJets): -1;
 
-       	jetFWPt_      [ii]  = ii < njetsFW_ ? myJetsFW[ii]->pt()    : 0;
-	jetFWEta_     [ii]  = ii < njetsFW_ ? myJetsFW[ii]->eta()   : 0;
-	jetFWPhi_     [ii]  = ii < njetsFW_ ? myJetsFW[ii]->phi()   : 0;
-	jetFWM_       [ii]  = ii < njetsFW_ ? myJetsFW[ii]->mass()  : 0;
-        jetFWGenPt_   [ii]  = ii < njetsFW_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0;  
+       	jetFWPt_      [ii]  = coolme(ii < njetsFW_ ? myJetsFW[ii]->pt()    : 0,   1.00);
+	jetFWEta_     [ii]  = coolme(ii < njetsFW_ ? myJetsFW[ii]->eta()   : 0,   0.05);
+	jetFWPhi_     [ii]  = coolme(ii < njetsFW_ ? myJetsFW[ii]->phi()   : 0,   0.05);
+	jetFWM_       [ii]  = coolme(ii < njetsFW_ ? myJetsFW[ii]->mass()  : 0,   0.10);
+        jetFWGenPt_   [ii]  = coolme(ii < njetsFW_ && genjetMatchedIndex >=0 ? myGenJets[genjetMatchedIndex]->pt() : 0,   1.00);  
     }
 
     nrjets_                   = (unsigned short) myRJets.size();
     for(int ii = 0 ; ii < nrjetsMax; ii++) 
     {
-       	rjetPt_      [ii]  = ii < nrjets_ ? myRJets[ii]->pt()    : 0;
-	rjetEta_     [ii]  = ii < nrjets_ ? myRJets[ii]->eta()   : 0;
-	rjetPhi_     [ii]  = ii < nrjets_ ? myRJets[ii]->phi()   : 0;
-	rjetM_       [ii]  = ii < nrjets_ ? myRJets[ii]->mass()  : 0;
-        rjetBTag_    [ii]  = ii < nrjets_ ? ((pat::Jet*) myRJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags")  : 0;  // 0.814 nominal cut
+       	rjetPt_      [ii]  = coolme(ii < nrjets_ ? myRJets[ii]->pt()    : 0,   1.00);
+	rjetEta_     [ii]  = coolme(ii < nrjets_ ? myRJets[ii]->eta()   : 0,   0.05);
+	rjetPhi_     [ii]  = coolme(ii < nrjets_ ? myRJets[ii]->phi()   : 0,   0.05);
+	rjetM_       [ii]  = coolme(ii < nrjets_ ? myRJets[ii]->mass()  : 0,   0.10);
+        rjetBTag_    [ii]  = coolme(ii < nrjets_ ? ((pat::Jet*) myRJets[ii])->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags")  : 0,   0.001);  // 0.814 nominal cut
     }
 
     ngenleps_                   = (unsigned short) myGenLeptons.size();
     for(int ii = 0 ; ii < ngenlepsMax; ii++) 
     {
-       	genlepPt_        [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pt()                                                    : 0;
-	genlepEta_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->eta()                                                   : 0;
-	genlepPhi_       [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->phi()                                                   : 0;
-	genlepM_         [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->mass()                                                  : 0;
+       	genlepPt_        [ii]  = coolme(ii < ngenleps_ ? myGenLeptons[ii]->pt()                                                    : 0,   0.50);
+	genlepEta_       [ii]  = coolme(ii < ngenleps_ ? myGenLeptons[ii]->eta()                                                   : 0,   0.05);
+	genlepPhi_       [ii]  = coolme(ii < ngenleps_ ? myGenLeptons[ii]->phi()                                                   : 0,   0.05);
+	genlepM_         [ii]  = coolme(ii < ngenleps_ ? myGenLeptons[ii]->mass()                                                  : 0,   0.05);
         genlepID_        [ii]  = ii < ngenleps_ ? myGenLeptons[ii]->pdgId()                                                 : 0;
         genlepMID_       [ii]  = ii < ngenleps_ ? (int)getGenMother(myGenLeptons[ii])->pdgId()                              : 0;
         genlepGMID_      [ii]  = ii < ngenleps_ ? (int)getGenMother(getGenMother(myGenLeptons[ii]))->pdgId()                : 0;
@@ -732,10 +732,10 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     ngenparts_                 = (unsigned short) myGenParticles.size();
     for(int ii = 0 ; ii < ngenpartsMax; ii++) 
     {
-       	genpartPt_      [ii]  = ii < ngenparts_ ? myGenParticles[ii]->pt()                                               : 0;
-	genpartEta_     [ii]  = ii < ngenparts_ ? myGenParticles[ii]->eta()                                              : 0;
-	genpartPhi_     [ii]  = ii < ngenparts_ ? myGenParticles[ii]->phi()                                              : 0;
-	genpartM_       [ii]  = ii < ngenparts_ ? myGenParticles[ii]->mass()                                             : 0;
+       	genpartPt_      [ii]  = coolme(ii < ngenparts_ ? myGenParticles[ii]->pt()                                               : 0,   0.50);
+	genpartEta_     [ii]  = coolme(ii < ngenparts_ ? myGenParticles[ii]->eta()                                              : 0,   0.05);
+	genpartPhi_     [ii]  = coolme(ii < ngenparts_ ? myGenParticles[ii]->phi()                                              : 0,   0.05);
+	genpartM_       [ii]  = coolme(ii < ngenparts_ ? myGenParticles[ii]->mass()                                             : 0,   0.05);
         genpartID_      [ii]  = ii < ngenparts_ ? myGenParticles[ii]->pdgId()                                            : 0;
         genpartDID1_    [ii]  = ii < ngenparts_ ? myGenParticles[ii]->daughter(0)->pdgId()                               : 0;
         genpartDID2_    [ii]  = ii < ngenparts_ ? myGenParticles[ii]->daughter(1)->pdgId()                               : 0;
@@ -764,32 +764,32 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         }
     }
 
-    genl1l2DPhi_             = ngenleps_>=2 ? genl1.DeltaPhi(genl2) : 0;
-    genl1l2DR_               = ngenleps_>=2 ? genl1.DeltaR(genl2) : 0;
-    genl1l2Pt_               = ngenleps_>=2 ? (genl1+genl2).Pt() : 0;
-    genl1l2M_                = ngenleps_>=2 ? (genl1+genl2).M() : 0;
-    genl1l2Eta_              = ngenleps_>=2 && genl1l2Pt_ > 1.e-3 ? (genl1+genl2).Eta() : 0;
-    genl1l2Phi_              = ngenleps_>=2 ? (genl1+genl2).Phi() : 0;
+    genl1l2DPhi_             = coolme(ngenleps_>=2 ? genl1.DeltaPhi(genl2) : 0,   0.05);
+    genl1l2DR_               = coolme(ngenleps_>=2 ? genl1.DeltaR(genl2)   : 0,   0.05);
+    genl1l2Pt_               = coolme(ngenleps_>=2 ? (genl1+genl2).Pt()    : 0,   0.50);
+    genl1l2M_                = coolme(ngenleps_>=2 ? (genl1+genl2).M()     : 0,   0.50);
+    genl1l2Eta_              = coolme(ngenleps_>=2 && genl1l2Pt_ > 1.e-3 ? (genl1+genl2).Eta() : 0,   0.05);
+    genl1l2Phi_              = coolme(ngenleps_>=2 ? (genl1+genl2).Phi()   : 0,   0.05);
 
     nphos_                   = (unsigned short) myPhotons.size();
     
-    puppimet_               =  rawpuppimet;          
-    met_                     = rawmet;          
-    metPhi_                  = rawmetPhi;
-    genmet_                  = genmet;          
-    sumEt_                   = rawmetSumEt;
-    t1met_                   = t1met;
-    t1metPhi_                = t1metPhi;
-    t1sumEt_                 = t1metSumEt;
-    hardmet_                 = hardmetVector.Pt();
-    hardmetPhi_              = hardmetVector.Phi();
+    puppimet_                = coolme(rawpuppimet,   2.50);          
+    met_                     = coolme(rawmet     ,   2.50);          
+    metPhi_                  = coolme(rawmetPhi  ,   0.05);
+    genmet_                  = coolme(genmet     ,   2.50);          
+    sumEt_                   = coolme(rawmetSumEt,   2.50);
+    t1met_                   = coolme(t1met      ,   2.50);
+    t1metPhi_                = coolme(t1metPhi   ,   0.05);
+    t1sumEt_                 = coolme(t1metSumEt ,   2.50);
+    hardmet_                 = coolme(hardmetVector.Pt() ,   2.50);
+    hardmetPhi_              = coolme(hardmetVector.Phi(),   0.05);
   
-    vHT_                     = HTVector.Pt();            
-    t1vHT_                   = t1HTVector.Pt();         
-    jvHT_                    = jHTVector.Pt();          
-    genjvHT_                 = genjHTVector.Pt();          
+    vHT_                     = coolme(HTVector.Pt()    ,   1.00);            
+    t1vHT_                   = coolme(t1HTVector.Pt()  ,   1.00);         
+    jvHT_                    = coolme(jHTVector.Pt()   ,   1.00);          
+    genjvHT_                 = coolme(genjHTVector.Pt(),   1.00);          
     
-    rho_                     = (float) (*rhoH);
+    rho_                     = coolme((float) (*rhoH),   0.5);
 
     nPU_                     = nPU; 
     nPUTrue_                 = nPUTrue; 

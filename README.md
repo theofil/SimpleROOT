@@ -1,7 +1,7 @@
 # SimpleROOT
 
 This is a MiniAOD analyzer producing a flat ROOT TTree for CMS physics analysis,
-of leptons, photons, jets and MET at the LHC. This specific release is for CMSSW_7_4_1
+of leptons, photons, jets and MET at the LHC. This specific release is for CMSSW_7_4_15
 and MiniAOD v1, is not further maintained.
 
 <h4> How to install this at CERN:  </h4>
@@ -9,9 +9,8 @@ and MiniAOD v1, is not further maintained.
 
 ssh username@lxplus.cern.ch  
 cd YourFavoriteDir  
-setenv SCRAM_ARCH slc6_amd64_gcc491  
-cmsrel CMSSW_7_4_1  
-cd CMSSW_7_4_1/src  
+cmsrel CMSSW_7_4_15  
+cd CMSSW_7_4_15/src  
 mkdir Tools  
 cd Tools/  
 git clone https://github.com/theofil/SimpleROOT.git  
@@ -185,6 +184,159 @@ events->Show(3)
 
 </samp>
 </pre>
+
+
+<h4> Another event printout after coolme compression  </h4>
+
+<samp>
+<pre>
+// DY event dumb, with passive ROOT compression
+// 
+======> EVENT:14602
+ goodVtx         = 1
+ nVtx            = 11
+ eventNum        = 25697636
+ runNum          = 1
+ lumi            = 102405
+ genWeight       = -23443.4
+ l1l2M           = 74.5
+ l1l2Pt          = 15
+ l1l2Eta         = 2.35
+ l1l2Phi         = -0.2
+ l1l2DPhi        = -2.85
+ l1l2DR          = 2.85
+ nleps           = 2
+ lepPt           = 43, 
+                  33
+ lepEta          = 0.85, 
+                  0.9
+ lepPhi          = -0.9, 
+                  1.95
+ lepM            = 0.1, 
+                  0.1
+ lepIso          = 0.01, 
+                  0
+ lepID           = -13, 
+                  13
+ lepGenMatchIndex = 0, 
+                  1
+ lepTriggerMatch = 1, 
+                  1
+ njets           = 3
+ jetPt           = 91, 
+                  49, 44
+ jetEta          = -1.15, 
+                  -2.2, -0.2
+ jetPhi          = -2.85, 
+                  0.4, 0.1
+ jetM            = 13.3, 
+                  8.1, 10.2
+ jetBTag         = 0.155, 
+                  0.301, 0.199
+ jetGenPt        = 105, 
+                  41, 54
+ njetsFW         = 2
+ jetFWPt         = 31, 
+                  31
+ jetFWEta        = 3.3, 
+                  2.75
+ jetFWPhi        = -2.4, 
+                  0.7
+ jetFWM          = 6.6, 
+                  5.8
+ jetFWGenPt      = 25, 
+                  0
+ nrjets          = 2
+ rjetPt          = 46, 
+                  35
+ rjetEta         = 0.9, 
+                  0.9
+ rjetPhi         = -0.9, 
+                  1.95
+ rjetM           = 4.7, 
+                  3.2
+ rjetBTag        = 0.072, 
+                  -10
+ ngenleps        = 2
+ genlepPt        = 43.5, 
+                  34.5
+ genlepEta       = 0.85, 
+                  0.9
+ genlepPhi       = -0.9, 
+                  1.95
+ genlepM         = 0.1, 
+                  0.1
+ genlepID        = -13, 
+                  13
+ genlepMID       = 23, 
+                  23
+ genlepGMID      = 1, 
+                  1
+ genlepIsPrompt  = 1, 
+                  1
+ genl1l2M        = 76.5
+ genl1l2Pt       = 14.5
+ genl1l2Eta      = 2.4
+ genl1l2Phi      = -0.15
+ genl1l2DPhi     = -2.85
+ genl1l2DR       = 2.85
+ nphos           = 1
+ puppimet        = 7.5
+ met             = 2.5
+ metPhi          = -1.4
+ genmet          = 0
+ t1met           = 10
+ t1metPhi        = -1.75
+ hardmet         = 17.5
+ hardmetPhi      = -0.35
+ sumEt           = 1210
+ t1sumEt         = 1245
+ rho             = 12
+ nPU             = 11
+ nPUTrue         = 9.77554
+ vHT             = 17
+ t1vHT           = 18
+ jvHT            = 3
+ genjvHT         = 15
+ HLT_e1e2        = 0
+ HLT_mu1mu2      = 1
+ HLT_mu1mu2TkMu8 = 20534
+ HLT_mu1e2       = 0
+ HLT_e1mu2       = 0
+ HLT_pfmet       = 0
+ HLT_e1          = 0
+ HLT_mu1         = 1
+ HLT_ZeroBias    = 1
+ Flag_trackingFailureFilter = 1
+ Flag_goodVertices = 1
+ Flag_CSCTightHaloFilter = 1
+ Flag_trkPOGFilters = 1
+ Flag_trkPOG_logErrorTooManyClusters = 1
+ Flag_EcalDeadCellTriggerPrimitiveFilter = 1
+ Flag_ecalLaserCorrFilter = 1
+ Flag_trkPOG_manystripclus53X = 1
+ Flag_eeBadScFilter = 1
+ Flag_METFilters = 1
+ Flag_HBHENoiseFilter = 1
+ Flag_trkPOG_toomanystripclus53X = 1
+ Flag_hcalLaserEventFilter = 1
+ isDYTauTau      = 0
+ isData          = 0
+ ngenparts       = 1
+ genpartPt       = 14.5
+ genpartEta      = 2.4
+ genpartPhi      = -0.15
+ genpartM        = 76.3
+ genpartID       = 23
+ genpartDID1     = -13
+ genpartDID2     = 13
+ genpartDRMI1    = 0
+ genpartDRMI2    = 1
+
+
+</samp>
+</pre>
+
 
 
 <h4> Dogma </h4>
