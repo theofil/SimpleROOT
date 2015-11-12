@@ -186,7 +186,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         int   genlepGGMID_                [ngenlepsMax]; // grand grand mother
         bool  genlepIsPrompt_             [ngenlepsMax]; // rivet safe prompt flag
 
-        float genl1l2DPhi_;
+        float genl1l2DPhi_;                              
         float genl1l2DR_;
         float genl1l2Pt_;
         float genl1l2M_;
@@ -209,6 +209,8 @@ class SimpleROOT : public edm::EDAnalyzer {
         float metPhi_;
         float t1met_;
         float t1metPhi_;
+        float hardmet_;
+        float hardmetPhi_;
         float genmet_;          
         float sumEt_;
         float t1sumEt_;
@@ -220,6 +222,7 @@ class SimpleROOT : public edm::EDAnalyzer {
         float vHT_;           // pt of the recoil vector of all objects excluding the dilepton [= -met - l1l2] 
         float t1vHT_;         // as vHT but with t1 correction
 	float jvHT_;          // recoil of hard jets and subleading leptons
+	float genjvHT_;          // recoil of hard jets and subleading leptons
 
 	unsigned short HLT_e1e2_;   // 0 if not fired, otherwise store the prescale (should be 1 for unprescaled paths) 
 	unsigned short HLT_mu1mu2_; 
@@ -347,6 +350,8 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("genmet"           ,&genmet_                ,"genmet/F");
     events_->Branch("t1met"            ,&t1met_                 ,"t1met/F");
     events_->Branch("t1metPhi"         ,&t1metPhi_              ,"t1metPhi/F");
+    events_->Branch("hardmet"          ,&hardmet_               ,"hardmet/F");
+    events_->Branch("hardmetPhi"       ,&hardmetPhi_            ,"hardmetPhi/F");
     events_->Branch("sumEt"            ,&sumEt_                 ,"sumEt/F");
     events_->Branch("t1sumEt"          ,&t1sumEt_               ,"t1sumEt/F");
 
@@ -357,6 +362,7 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("vHT"              ,&vHT_                   ,"vHT/F      ");
     events_->Branch("t1vHT"            ,&t1vHT_                 ,"t1vHT/F    ");
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
+    events_->Branch("genjvHT"          ,&genjvHT_               ,"genjvHT/F     ");
 
     events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/s");
     events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/s");
@@ -436,7 +442,8 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     vector<const reco::Candidate *> myGenLeptons;
     vector<const reco::Candidate *> myGenParticles; // store here interesting particles, like top, W, Z, higgs
-    vector<const reco::Candidate *> myGenJets; // in this container we will store all prompt jets (PV)
+    vector<const reco::Candidate *> myGenJets; // in this container we will store all gen jets
+    vector<const reco::Candidate *> myGenJetsCE; // in this container we will store all gen jets within |eta|<2.4
 
     vector<TLorentzVector> hltEgammaCandidates;
     vector<TLorentzVector >hltL3MuonCandidates;
@@ -508,7 +515,6 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 	if(isGoodElectron(el)) myLeptons.push_back(&el);
     }
 
-
     for(const pat::Jet &myjet : *jets)
     {
 	bool isLeptonMatched = false;
@@ -520,19 +526,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         if(fabs(myjet.eta()) > 2.4) isCE = false;
 
         for(auto & lep: myLeptons) if( P4(lep).DeltaR( P4(&myjet) ) < DRmax ) isLeptonMatched = true;
-
+       
         // save central jets 
 	if( isGoodJet(myjet) && !isLeptonMatched && isCE) myJets.push_back(&myjet);
-	if( isGoodJet(myjet) && isLeptonMatched  && isCE ) myRJets.push_back(&myjet);
-
+	if( isGoodJet(myjet) && isLeptonMatched && isCE)  myRJets.push_back(&myjet);
+  
         // save all forward jets
-	if( isGoodJet(myjet) && !isCE) myJetsFW.push_back(&myjet);
-    }
-
-    if(!isData_)
-    for(const reco::GenJet &myjet : *genjets)  // fill-up all gen jets no cut (pdgId = 0 for genjets)
-    {
-	myGenJets.push_back(&myjet);
+        if( isGoodJet(myjet) && !isCE) myJetsFW.push_back(&myjet);
     }
 
 
@@ -561,6 +561,29 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
             myGenParticles.push_back(&genParticle);
 	}
     }
+
+    if(!isData_)
+    for(const reco::GenJet &myjet : *genjets)  // fill-up all gen jets no cut (pdgId = 0 for genjets)
+    {
+        // save all gen jets here
+	myGenJets.push_back(&myjet);
+
+        // save pt, eta and lepton matched restricted collection
+	bool isLeptonMatched = false;
+        float DRmax = 0.4;
+        bool isCE = true;
+        bool isAboveThreshold = true;
+
+        if(myjet.pt() < 30) isAboveThreshold = false;  // considers only jets above 30
+        if(fabs(myjet.eta()) > 2.4) isCE = false;
+
+        if(isAboveThreshold && isCE) 
+        {
+	    for(auto & lep: myGenLeptons) if( P4(lep).DeltaR( P4(&myjet) ) < DRmax && ((reco::GenParticle*)lep)->isPromptFinalState()) isLeptonMatched = true; // match with prompt 
+	    if(!isLeptonMatched)  myGenJetsCE.push_back(&myjet);
+        }
+    }
+
     const pat::MET &puppimet = puppimets->front();
     float rawpuppimet        = puppimet.uncorPt();
 
@@ -595,12 +618,19 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     metVector.SetPtEtaPhiE  (rawmet  , 0, rawmetPhi, rawmet );
     t1metVector.SetPtEtaPhiE(t1met   , 0, t1metPhi , t1met  );
 
-    TLorentzVector HTVector, t1HTVector, jHTVector; 
+    TLorentzVector HTVector, t1HTVector, jHTVector, hardmetVector, genjHTVector, genhardmetVector; 
    
     HTVector   = -metVector -l1 -l2;
     t1HTVector = -t1metVector -l1 -l2;
     
-    for(auto &myjet : myJets)    jHTVector += P4(myjet);
+    for(auto &myjet : myJets) jHTVector += P4(myjet);
+
+    hardmetVector = jHTVector;
+    for(auto &mylep : myLeptons) hardmetVector += P4(mylep);
+
+    for(auto &myjet : myGenJetsCE)  genjHTVector += P4(myjet);
+    for(auto &mylep : myGenLeptons) if(((reco::GenParticle*)mylep)->isPromptFinalState()) genhardmetVector += P4(mylep); // for reco-driven consistency of gen
+
  
     // --- get pileup info 
     float nPU = 0;
@@ -650,6 +680,7 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     l1l2Phi_                 = nleps_>=2 ? (l1+l2).Phi() : 0;
 
     njets_                   = (unsigned short) myJets.size();
+
     for(int ii = 0 ; ii < njetsMax; ii++) 
     {
         int genjetMatchedIndex = ii < njets_ ? getMatchedIndex(myJets[ii], myGenJets): -1;
@@ -750,10 +781,13 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     t1met_                   = t1met;
     t1metPhi_                = t1metPhi;
     t1sumEt_                 = t1metSumEt;
-
+    hardmet_                 = hardmetVector.Pt();
+    hardmetPhi_              = hardmetVector.Phi();
+  
     vHT_                     = HTVector.Pt();            
     t1vHT_                   = t1HTVector.Pt();         
     jvHT_                    = jHTVector.Pt();          
+    genjvHT_                 = genjHTVector.Pt();          
     
     rho_                     = (float) (*rhoH);
 
