@@ -1,0 +1,1 @@
+./cli.script.py --query "dataset=/*/Run2015D-PromptReco-v4/MINIAOD" --limit 5000

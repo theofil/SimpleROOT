@@ -1,37 +1,18 @@
 ### JSON files
 # all json web files: https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/
-config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/DCSOnly/json_DCSONLY_Run2015B.txt'
-config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-251642_13TeV_PromptReco_Collisions15_JSON.txt'
-config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-251883_13TeV_PromptReco_Collisions15_JSON.txt'
+config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-260426_13TeV_PromptReco_Collisions15_25ns_JSON.txt'
+# Cert_246908-260426_13TeV_PromptReco_Collisions15_25ns_JSON.txt has ~ 1.65/fb
 
 ### Data 
+config.Data.inputDataset =  '/DoubleMuon/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/DoubleEG/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/MuonEG/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/SingleElectron/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/ZeroBias/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/MET/Run2015D-PromptReco-v4/MINIAOD'
 
 ### MC -- RunIISpring15MiniAODv2
 config.Data.inputDataset =  '/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-amcatnloFXFX-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM'
+config.Data.inputDataset =  '/TT_TuneCUETP8M1_13TeV-powheg-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM'
 
-
-### example of configuration for MC
-########################
-from CRABClient.UserUtilities import config
-config = config()
-
-config.General.requestName = 'MuonEG_v2b'
-config.General.workArea = 'crab_projects'
-
-config.JobType.pluginName = 'Analysis'
-config.JobType.psetName = '../runme_cfg.py'
-
-config.Data.inputDataset = '/MuonEG/Run2015B-PromptReco-v1/MINIAOD'
-
-config.Data.inputDBS = 'global'
-config.Data.splitting = 'FileBased'
-config.Data.unitsPerJob = 4
-config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-251642_13TeV_PromptReco_Collisions15_JSON.txt'
-#config.Data.totalUnits = 25
-config.Data.outLFNDirBase = '/store/user/theofil/test' # or '/store/group/<subdir>'
-config.Data.publication = False
-config.Data.publishDataName = ''
-
-
-config.Site.storageSite = 'T2_CH_CERN'
 

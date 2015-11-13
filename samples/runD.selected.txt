@@ -1,0 +1,11 @@
+
+/DoubleMuon/Run2015D-PromptReco-v4/MINIAOD
+/DoubleEG/Run2015D-PromptReco-v4/MINIAOD
+/MuonEG/Run2015D-PromptReco-v4/MINIAOD
+
+/SingleElectron/Run2015D-PromptReco-v4/MINIAOD
+/SingleMuon/Run2015D-PromptReco-v4/MINIAOD
+
+/ZeroBias/Run2015D-PromptReco-v4/MINIAOD
+
+/MET/Run2015D-PromptReco-v4/MINIAOD
