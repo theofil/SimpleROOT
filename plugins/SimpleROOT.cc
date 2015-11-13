@@ -224,29 +224,23 @@ class SimpleROOT : public edm::EDAnalyzer {
 	float jvHT_;          // recoil of hard jets and subleading leptons
 	float genjvHT_;          // recoil of hard jets and subleading leptons
 
-	unsigned short HLT_e1e2_;   // 0 if not fired, otherwise store the prescale (should be 1 for unprescaled paths) 
-	unsigned short HLT_mu1mu2_; 
-	unsigned short HLT_mu1mu2TkMu8_; 
-	unsigned short HLT_mu1e2_; 
-	unsigned short HLT_e1mu2_; 
-	unsigned short HLT_pfmet_; 
-	unsigned short HLT_e1_; 
-	unsigned short HLT_mu1_; 
-	unsigned short HLT_ZeroBias_; 
+	unsigned int HLT_e1e2_;   // 0 if not fired, otherwise store the prescale (should be 1 for unprescaled paths) 
+	unsigned int HLT_mu1mu2_; 
+	unsigned int HLT_mu1mu2TkMu8_; 
+	unsigned int HLT_mu1e2_; 
+	unsigned int HLT_e1mu2_; 
+	unsigned int HLT_pfmet_; 
+	unsigned int HLT_e1_; 
+	unsigned int HLT_mu1_; 
+	unsigned int HLT_mu1TkMu20_; 
+	unsigned int HLT_ZeroBias_; 
        
-	bool Flag_trackingFailureFilter_;		        
 	bool Flag_goodVertices_;			 
 	bool Flag_CSCTightHaloFilter_;		 
-	bool Flag_trkPOGFilters_;			 
-	bool Flag_trkPOG_logErrorTooManyClusters_;	 
 	bool Flag_EcalDeadCellTriggerPrimitiveFilter_; 
-	bool Flag_ecalLaserCorrFilter_;		 
-	bool Flag_trkPOG_manystripclus53X_;		 
 	bool Flag_eeBadScFilter_;			 
 	bool Flag_METFilters_;			 
 	bool Flag_HBHENoiseFilter_;			 
-	bool Flag_trkPOG_toomanystripclus53X_;	 
-	bool Flag_hcalLaserEventFilter_;		 
 
 	bool isDYTauTau_; 
         bool isData_;
@@ -364,29 +358,23 @@ genjetsToken(consumes<edm::View<reco::GenJet>>(iConfig.getUntrackedParameter("sl
     events_->Branch("jvHT"             ,&jvHT_                  ,"jvHT/F     ");
     events_->Branch("genjvHT"          ,&genjvHT_               ,"genjvHT/F     ");
 
-    events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/s");
-    events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/s");
-    events_->Branch("HLT_mu1mu2TkMu8"  ,&HLT_mu1mu2TkMu8_       ,"HLT_mu1mu2TkMu8/s");
-    events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/s");
-    events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/s");
-    events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/s");
-    events_->Branch("HLT_e1"           ,&HLT_e1_                ,"HLT_e1/s");
-    events_->Branch("HLT_mu1"          ,&HLT_mu1_               ,"HLT_mu1/s");
-    events_->Branch("HLT_ZeroBias"     ,&HLT_ZeroBias_          ,"HLT_ZeroBias/s");
+    events_->Branch("HLT_e1e2"         ,&HLT_e1e2_              ,"HLT_e1e2/i");
+    events_->Branch("HLT_mu1mu2"       ,&HLT_mu1mu2_            ,"HLT_mu1mu2/i");
+    events_->Branch("HLT_mu1mu2TkMu8"  ,&HLT_mu1mu2TkMu8_       ,"HLT_mu1mu2TkMu8/i");
+    events_->Branch("HLT_mu1e2"        ,&HLT_mu1e2_             ,"HLT_mu1e2/i");
+    events_->Branch("HLT_e1mu2"        ,&HLT_e1mu2_             ,"HLT_e1mu2/i");
+    events_->Branch("HLT_pfmet"        ,&HLT_pfmet_             ,"HLT_pfmet/i");
+    events_->Branch("HLT_e1"           ,&HLT_e1_                ,"HLT_e1/i");
+    events_->Branch("HLT_mu1"          ,&HLT_mu1_               ,"HLT_mu1/i");
+    events_->Branch("HLT_mu1TkMu20"    ,&HLT_mu1TkMu20_         ,"HLT_mu1TkMu20/i");
+    events_->Branch("HLT_ZeroBias"     ,&HLT_ZeroBias_          ,"HLT_ZeroBias/i");
 
-    events_->Branch("Flag_trackingFailureFilter"                   ,&Flag_trackingFailureFilter_	                ,"Flag_trackingFailureFilter/O");
     events_->Branch("Flag_goodVertices"                            ,&Flag_goodVertices_			                ,"Flag_goodVertices/O");
     events_->Branch("Flag_CSCTightHaloFilter"                      ,&Flag_CSCTightHaloFilter_		                ,"Flag_CSCTightHaloFilter/O");
-    events_->Branch("Flag_trkPOGFilters"                           ,&Flag_trkPOGFilters_		                ,"Flag_trkPOGFilters/O");
-    events_->Branch("Flag_trkPOG_logErrorTooManyClusters"          ,&Flag_trkPOG_logErrorTooManyClusters_	        ,"Flag_trkPOG_logErrorTooManyClusters/O");
     events_->Branch("Flag_EcalDeadCellTriggerPrimitiveFilter"      ,&Flag_EcalDeadCellTriggerPrimitiveFilter_           ,"Flag_EcalDeadCellTriggerPrimitiveFilter/O");
-    events_->Branch("Flag_ecalLaserCorrFilter"                     ,&Flag_ecalLaserCorrFilter_		                ,"Flag_ecalLaserCorrFilter/O");
-    events_->Branch("Flag_trkPOG_manystripclus53X"                 ,&Flag_trkPOG_manystripclus53X_		        ,"Flag_trkPOG_manystripclus53X/O");
     events_->Branch("Flag_eeBadScFilter"                           ,&Flag_eeBadScFilter_		                ,"Flag_eeBadScFilter/O");
     events_->Branch("Flag_METFilters"                              ,&Flag_METFilters_			                ,"Flag_METFilters/O");
     events_->Branch("Flag_HBHENoiseFilter"                         ,&Flag_HBHENoiseFilter_			        ,"Flag_HBHENoiseFilter/O");
-    events_->Branch("Flag_trkPOG_toomanystripclus53X"              ,&Flag_trkPOG_toomanystripclus53X_	                ,"Flag_trkPOG_toomanystripclus53X/O");
-    events_->Branch("Flag_hcalLaserEventFilter"                    ,&Flag_hcalLaserEventFilter_		                ,"Flag_hcalLaserEventFilter/O");
 
     events_->Branch("isDYTauTau"         ,&isDYTauTau_              ,"isDYTauTau/O");
     events_->Branch("isData"             ,&isData_                  ,"isData/O");
@@ -449,21 +437,23 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     vector<TLorentzVector >hltL3MuonCandidates;
 
     // --- trigger info
-    unsigned short HLT_e1e2          = 0;
-    unsigned short HLT_mu1mu2        = 0;
-    unsigned short HLT_mu1mu2TkMu8   = 0;
-    unsigned short HLT_mu1e2         = 0;
-    unsigned short HLT_e1mu2         = 0;
-    unsigned short HLT_pfmet         = 0;
-    unsigned short HLT_e1            = 0;
-    unsigned short HLT_mu1           = 0;
-    unsigned short HLT_ZeroBias      = 0;
+    unsigned int HLT_e1e2          = 0;
+    unsigned int HLT_mu1mu2        = 0;
+    unsigned int HLT_mu1mu2TkMu8   = 0;
+    unsigned int HLT_mu1e2         = 0;
+    unsigned int HLT_e1mu2         = 0;
+    unsigned int HLT_pfmet         = 0;
+    unsigned int HLT_e1            = 0;
+    unsigned int HLT_mu1           = 0;
+    unsigned int HLT_mu1TkMu20     = 0;
+    unsigned int HLT_ZeroBias      = 0;
 
     const edm::TriggerNames &names = iEvent.triggerNames(*triggerBits);
     for (unsigned int i = 0, n = triggerBits->size(); i < n; ++i) 
     {
 	string trigger_name = string(names.triggerName(i));
         trigger_name.pop_back();
+   
 
         if(trigger_name == string("HLT_Ele17_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v")          && triggerBits->accept(i)) HLT_e1e2         = triggerPrescales->getPrescaleForIndex(i); 
         if(trigger_name == string("HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v")                && triggerBits->accept(i)) HLT_mu1mu2       = triggerPrescales->getPrescaleForIndex(i);
@@ -473,8 +463,9 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         if(trigger_name == string("HLT_PFMET170_NoiseCleaned_v")                          && triggerBits->accept(i)) HLT_pfmet        = triggerPrescales->getPrescaleForIndex(i); 
         if(trigger_name == string("HLT_Ele22_eta2p1_WPLoose_Gsf_v")                       && triggerBits->accept(i)) HLT_e1           = triggerPrescales->getPrescaleForIndex(i); 
         if(trigger_name == string("HLT_IsoMu20_v")                                        && triggerBits->accept(i)) HLT_mu1          = triggerPrescales->getPrescaleForIndex(i); 
-        if(trigger_name == string("HLT_IsoTkMu20_v")                                      && triggerBits->accept(i)) HLT_mu1          = triggerPrescales->getPrescaleForIndex(i); 
+        if(trigger_name == string("HLT_IsoTkMu20_v")                                      && triggerBits->accept(i)) HLT_mu1TkMu20    = triggerPrescales->getPrescaleForIndex(i); 
         if(trigger_name == string("HLT_ZeroBias_v")                                       && triggerBits->accept(i)) HLT_ZeroBias     = triggerPrescales->getPrescaleForIndex(i); 
+
     }
 
 
@@ -550,16 +541,18 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
         float pt   = genParticle.pt() ;
         float eta  = genParticle.eta();
         int status = genParticle.status();
-        int nod    = genParticle.numberOfDaughters();
 
         if(pt > 10 && fabs(eta) < 2.4 && (abs(ID) == 11 || abs(ID) == 13) && status == 1)myGenLeptons.push_back(&genParticle); 
 	if(pt > 5 && (abs(ID) == 15) && !isDYTauTau_ && getGenMother(&genParticle)->pdgId() == 23)isDYTauTau_ = true;
- 
+
+        /* may add this back if needed in the future
+        int nod    = genParticle.numberOfDaughters();
         if(nod == 2) // save 1->2 decays of interesting particles
         if(ID == 23 || abs(ID)==24 || abs(ID)==25 || abs(ID) == 6)
         {
             myGenParticles.push_back(&genParticle);
 	}
+        */
     }
 
     if(!isData_)
@@ -796,33 +789,30 @@ void SimpleROOT::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     HLT_e1e2_                = HLT_e1e2;
     HLT_mu1mu2_              = HLT_mu1mu2;
+    HLT_mu1mu2TkMu8_         = HLT_mu1mu2TkMu8;
     HLT_mu1e2_               = HLT_mu1e2;
     HLT_e1mu2_               = HLT_e1mu2;
     HLT_pfmet_               = HLT_pfmet;
     HLT_e1_                  = HLT_e1;
     HLT_mu1_                 = HLT_mu1;
+    HLT_mu1TkMu20_           = HLT_mu1TkMu20;
     HLT_ZeroBias_            = HLT_ZeroBias;
     
+    /* Will add this block back in 76X re-reco
     const edm::TriggerNames &fnames = iEvent.triggerNames(*filterBits);
     for (unsigned int i = 0, n = filterBits->size(); i < n; ++i) 
     {
       bool filterdecision(true);
       filterdecision = filterBits->accept(i);
       string filterName = fnames.triggerName(i);
-      if(filterName=="Flag_trackingFailureFilter")                  Flag_trackingFailureFilter_ = filterdecision; 
       if(filterName=="Flag_goodVertices")			    Flag_goodVertices_ = filterdecision;       
       if(filterName=="Flag_CSCTightHaloFilter")                     Flag_CSCTightHaloFilter_ = filterdecision;                                                         		 
-      if(filterName=="Flag_trkPOGFilters")                          Flag_trkPOGFilters_ = filterdecision;                                     			 
-      if(filterName=="Flag_trkPOG_logErrorTooManyClusters")         Flag_trkPOG_logErrorTooManyClusters_ = filterdecision;	 
       if(filterName=="Flag_EcalDeadCellTriggerPrimitiveFilter")     Flag_EcalDeadCellTriggerPrimitiveFilter_ = filterdecision;
-      if(filterName=="Flag_ecalLaserCorrFilter")                    Flag_ecalLaserCorrFilter_ = filterdecision;                                      		 
-      if(filterName=="Flag_trkPOG_manystripclus53X")                Flag_trkPOG_manystripclus53X_ = filterdecision;                                    		 
       if(filterName=="Flag_eeBadScFilter")                          Flag_eeBadScFilter_ = filterdecision;                       			 
       if(filterName=="Flag_METFilters")                             Flag_METFilters_ = filterdecision;                    			
       if(filterName=="Flag_HBHENoiseFilter")                        Flag_HBHENoiseFilter_ = filterdecision;                 			 
-      if(filterName=="Flag_trkPOG_toomanystripclus53X")             Flag_trkPOG_toomanystripclus53X_ = filterdecision;                        	 
-      if(filterName=="Flag_hcalLaserEventFilter")	            Flag_hcalLaserEventFilter_ = filterdecision;                           	 
     }
+    */
 
     isDYTauTau_            = isDYTauTau_; // variable has been already initialized & previously set, shown here for completeness
 
