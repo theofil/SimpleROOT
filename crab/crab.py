@@ -17,5 +17,5 @@ config.Data.unitsPerJob = 250000
 
 config.Data.outLFNDirBase = '/store/user/theofil/test' # or '/store/group/<subdir>'
 config.Data.publication = False
-config.Data.publishDataName = ''
+config.Data.outputDatasetTag = ''
 config.Site.storageSite = 'T2_CH_CERN'
