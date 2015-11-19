@@ -8,6 +8,7 @@ config.Data.inputDataset =  '/DoubleMuon/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.inputDataset =  '/DoubleEG/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.inputDataset =  '/MuonEG/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.inputDataset =  '/SingleElectron/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/SingleMuon/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.inputDataset =  '/ZeroBias/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.inputDataset =  '/MET/Run2015D-PromptReco-v4/MINIAOD'
 

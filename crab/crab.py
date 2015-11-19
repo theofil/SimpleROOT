@@ -2,7 +2,7 @@
 from CRABClient.UserUtilities import config
 config = config()
 
-config.General.requestName = 'MET___Run2015D-PromptReco-v4___coolv1'
+config.General.requestName = 'SingleMuon___Run2015D-PromptReco-v4___coolv1'
 config.General.workArea = 'crab_projects'
 
 config.JobType.pluginName = 'Analysis'
@@ -10,7 +10,7 @@ config.JobType.psetName = '../runme_cfg.py'
 config.Data.inputDBS = 'global'
 
 
-config.Data.inputDataset =  '/MET/Run2015D-PromptReco-v4/MINIAOD'
+config.Data.inputDataset =  '/SingleMuon/Run2015D-PromptReco-v4/MINIAOD'
 config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-260627_13TeV_PromptReco_Collisions15_25ns_JSON.txt'
 config.Data.splitting = 'EventAwareLumiBased'
 config.Data.unitsPerJob = 250000
