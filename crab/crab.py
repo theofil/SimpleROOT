@@ -2,7 +2,15 @@
 from CRABClient.UserUtilities import config
 config = config()
 
-config.General.requestName = 'SingleMuon___Run2015D-PromptReco-v4___coolv1'
+#########
+dataset         = '/SMS-T2tt_mStop-500_mLSP-325_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM'
+isData          = False
+requestName     = dataset.replace("/","___") + "___coolv1"
+requestName     = requestName[3:]
+requestName     = requestName.replace("-","__")
+############
+
+config.General.requestName = requestName
 config.General.workArea = 'crab_projects'
 
 config.JobType.pluginName = 'Analysis'
@@ -10,8 +18,9 @@ config.JobType.psetName = '../runme_cfg.py'
 config.Data.inputDBS = 'global'
 
 
-config.Data.inputDataset =  '/SingleMuon/Run2015D-PromptReco-v4/MINIAOD'
-config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-260627_13TeV_PromptReco_Collisions15_25ns_JSON.txt'
+config.Data.inputDataset = dataset
+if(isData): 
+    config.Data.lumiMask = 'https://cms-service-dqm.web.cern.ch/cms-service-dqm/CAF/certification/Collisions15/13TeV/Cert_246908-260627_13TeV_PromptReco_Collisions15_25ns_JSON.txt'
 config.Data.splitting = 'EventAwareLumiBased'
 config.Data.unitsPerJob = 250000
 
@@ -19,3 +28,5 @@ config.Data.outLFNDirBase = '/store/user/theofil/test' # or '/store/group/<subdi
 config.Data.publication = False
 config.Data.outputDatasetTag = ''
 config.Site.storageSite = 'T2_CH_CERN'
+
+
