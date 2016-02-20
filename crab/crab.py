@@ -3,8 +3,8 @@ from CRABClient.UserUtilities import config
 config = config()
 
 #########
-dataset         = '/SMS-T2tt_mStop-500_mLSP-325_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISpring15MiniAODv2-74X_mcRun2_asymptotic_v2-v1/MINIAODSIM'
-isData          = False
+dataset         = '/ZeroBias/Run2015C_25ns-05Oct2015-v1/MINIAOD'
+isData          = True
 requestName     = dataset.replace("/","___") + "___coolv1"
 requestName     = requestName[3:]
 requestName     = requestName.replace("-","__")
